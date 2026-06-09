@@ -1,0 +1,219 @@
+Resumen importacion GPS - 2026-06-07 22:07:21
+Placas Excel: 210
+Vehiculos con GPS/API en mapa: 51
+Placas sin respuesta GPS: 160
+
+Vehiculos en mapa:
+EQO656 | 4.3288798,-74.3651580 | 2026-06-07 17:01:32 | E: ---, Cl 21 Con Cr 5, Barrio Fusacatan, Fusagasugã, Cundinamarca, Colombia
+EQP029 | 4.5077547,-74.1073608 | 2026-06-07 17:00:56 | E: 05ZA0050, E:05ZA0050, Cl 82 Con Cr 4bis Sur Este, Gran Yomasa, Bogotã D.C, Colombia
+EQR062 | 4.6087128,-74.1635400 | 2026-06-07 17:04:45 | E: ---, Cl 46bs Con Cr 77q, Jaqueline, Bogotã D.C, Colombia
+EQY543 | 4.6300248,-74.2015915 | 2026-06-07 17:03:22 | E: ---, Cr 94a Con Cl 72 Sur, San Bernardino Xvii, Bogotã D.C, Colombia
+ESL699 | 4.5714458,-74.0931015 | 2026-06-07 17:06:34 | E: ---, Cl 22 Con Cr 6 Sur, 20 De Julio, Bogotã D.C, Colombia
+GUR917 | 4.5188870,-74.1184615 | 2026-06-07 17:04:32 | E: ---, Cl 72a Con Cr 1b Sur, La Aurora, Bogotã D.C, Colombia
+GUW122 | 4.5749878,-74.4442748 | 2026-06-07 17:02:39 | E: ---, Troncal Del Tequendama, El Triunfo, El Colegio, Cundinamarca, Colombia
+GUW377 | 4.7448822,-74.1088189 | 2026-06-07 17:06:36 | E: ---, Cr 126d Con Cl 137a, La Gaitana, Bogotã D.C, Colombia
+KMZ767 | 4.7015380,-74.1068725 | 2026-06-07 17:06:14 | E: ---, Cl 75 Con Cr 90bis, Paris, Bogotã D.C, Colombia
+LFQ647 | 4.5328878,-74.0848388 | 2026-06-07 17:04:47 | E: ---, Dg 53d Con Tv 15bbis B Sur Este, Los Libertadores, Bogotã D.C, Colombia
+LLP212 | 4.6269410,-74.1230050 | 2026-06-07 17:06:41 | E: ---, Cl 4d Con Cr 67a, La Pradera, Bogotã D.C, Colombia
+LLR286 | 4.6110190,-74.1695403 | 2026-06-07 17:02:06 | E: ---, Cl 53s Con Cr 78hbisa, Catalina, Bogotã D.C, Colombia
+LPZ307 | 4.5501708,-74.1137695 | 2026-06-07 17:05:29 | E: ---, Calle 51 Sur, Marruecos, Tunjuelito, Bogotá, Distrito Capital, Colombia
+LQL118 | 4.5936222,-74.1636123 | 2026-06-07 17:05:49 | E: ---, Carrera 71, Rincón De La Valvanera, Ciudad Bolivar, Bogotá, Distrito Capital, Colombia
+LUX175 | 4.7470998,-74.5442580 | 2026-06-07 17:04:54 | E: ---, Quipile, Cundinamarca, Colombia
+NHP551 | 4.5679230,-74.1128158 | 2026-06-07 17:02:57 | E: ---, Tv 12d Con Dg 33 Sur, La Resurreccion, Bogotã D.C, Colombia
+NHT774 | 4.6305789,-74.1755467 | 2026-06-07 17:01:40 | E: ---, Cr 87d Con Cl 48s, Las Margaritas, Bogotã D.C, Colombia
+NOY133 | 4.5892750,-74.1718800 | 2026-06-07 17:05:54 | E: ---, Cr 73j Con Cl 62ds, Galicia, Bogotã D.C, Colombia
+NSY506 | 4.5804050,-74.1276950 | 2026-06-07 17:02:30 | E: ---, Cr 25 Con Cl 46 Sur, Claret, Bogotã D.C, Colombia
+NUV377 | 4.6126890,-74.1222380 | 2026-06-07 17:06:15 | E: ---, Diagonal 2 Sur, Milenta, Puente Aranda, Bogotá, Distrito Capital, Colombia
+NUW620 | 4.7129668,-74.1143875 | 2026-06-07 17:03:07 | E: ---, Cl 80 Con Cr 103a, Bochica Ii, Bogotã D.C, Colombia
+PMV641 | 4.5851458,-74.1638945 | 2026-06-07 17:01:07 | E: ---, Cr 71c Con Cl 66as, El Penon Del Cortijo, Bogotã D.C, Colombia
+PMW454 | 4.5792422,-74.1559677 | 2026-06-07 17:03:06 | E: ---, Avenida Calle 68 Sur, Verona, Ciudad Bolívar, Bogotá, Distrito Capital, Colombia
+PMX694 | 4.5564588,-74.1060867 | 2026-06-07 17:01:47 | E: 18AN0060, E:18AN0060, Cl 48i Con Tv 1a Sur, Cerros De Oriente, Bogotã D.C, Colombia
+SVC786 | 4.5630468,-74.0797423 | 2026-06-07 17:02:29 | E: ---, Carrera 13 Este, Santa Ines, San Cristóbal, Bogotá, Distrito Capital, Colombia
+SVF970 | 4.6151418,-74.0826110 | 2026-06-07 17:04:23 | E: ---, Carrera 22, Los Mártires, Bogotá, Distrito Capital, Colombia
+SZZ557 | 4.5915107,-74.3717422 | 2026-06-07 17:03:42 | E: ---, La María, San Antonio Del Tequendama, Cundinamarca, Colombia
+TLM353 | 4.5810810,-74.1428350 | 2026-06-07 17:06:43 | E: ---, Dg 58 Con Cl 56a Sur, San Vicente Ferrer, Bogotã D.C, Colombia
+TSW227 | 4.5797538,-74.1359177 | 2026-06-07 17:03:00 | E: ---, Cr 27 Con Dg 51 Sur, El Carmen, Bogotã D.C, Colombia
+TTP073 | 4.5931480,-74.2038380 | 2026-06-07 17:00:21 | E: ---, Transversal 17c, Paseo De Rosales, La Despensa, Soacha, Cundinamarca, Colombia
+TTP802 | 4.6255187,-74.1084898 | 2026-06-07 17:04:09 | E: ---, Av Batallon Con Tv 49, San Rafael Industrial, Bogotã D.C, Colombia
+TUO216 | 4.6024532,-74.1249693 | 2026-06-07 17:06:03 | E: ---, Cl 29s Con Cr 51a, Alcala, Bogotã D.C, Colombia
+UFY109 | 4.5683930,-74.2271060 | 2026-06-07 17:06:37 | E: ---, Km 87 Via Melgar-Bogota, Maiporé, Compartir, Corregimiento 2 Norte, Soacha, Cundinamarca, Colombia
+WEP151 | 4.5662450,-74.0904312 | 2026-06-07 17:05:05 | E: ---, Cl 27a Con Cr 1bis Sur, Montebello, Bogotã D.C, Colombia
+WEX568 | 4.6522760,-74.1367797 | 2026-06-07 17:05:20 | E: ---, Cr 80c Con Cl 13a, Vergel Occidental, Bogotã D.C, Colombia
+WFT791 | 4.7245833,-74.2281500 | 2026-06-07 17:06:46 | E: ---, Calle 18, El Remanso, Mosquera, Sabana Occidente, Cundinamarca, Rap Especial Central
+WHQ405 | 4.6236630,-74.1129560 | 2026-06-07 17:05:57 | E: ---, Cl 5b Bis Con Cr 53d Bis, Colon, Bogotã D.C, Colombia
+WHS409 | 4.6033038,-74.2134475 | 2026-06-07 17:05:15 | E: ---, Calle 35, Ciudad Verde, La Despensa, Soacha, Cundinamarca, Colombia
+WLL235 | 4.8261008,-73.9324035 | 2026-06-07 17:06:18 | E: ---, Sopo Cund - Guasca Cund Km  10 - 9 , Guasca, Cundinamarca, Colombia
+WLL849 | 4.5859627,-74.2069397 | 2026-06-07 17:02:39 | E: ---, Diagonal 30b, Soacha Central, Soacha, Cundinamarca, Colombia
+WLM190 | 4.5682310,-74.1064147 | 2026-06-07 17:04:38 | E: ---, Cl 36a Con Cr 12bis Sur, San Luis, Bogotã D.C, Colombia
+WLM352 | 4.6211167,-74.1172539 | 2026-06-07 17:06:26 | E: ---, Cl 4b Con Cr 54, Colon, Bogotã D.C, Colombia
+WML521 | 4.6090807,-74.2181090 | 2026-06-07 17:02:21 | E: ---, Avenida Carrera 36, Ciudad Verde, La Despensa, Soacha, Cundinamarca, Colombia
+WMM695 | 4.7199148,-74.1161803 | 2026-06-07 17:06:32 | E: ---, Tv 110a Con Cl 82, Ciudadela Colsubsidio, Bogotã D.C, Colombia
+WMZ925 | 4.6226492,-74.0904922 | 2026-06-07 17:06:40 | E: ---, Cr 34 Con Cl 19c, Cundinamarca, Bogotã D.C, Colombia
+WNK565 | 4.6177256,-74.1341006 | 2026-06-07 17:01:06 | E: ---, Calle 8 Sur, Hipotecho Occidental, Kennedy, Bogotá, Distrito Capital, Colombia
+WNK717 | 4.5134510,-74.1165600 | 2026-06-07 17:02:22 | E: ---, Cl 76 Con Cr 1 Sur, San Juan Bautista, Bogotã D.C, Colombia
+WOY553 | 4.5988960,-74.1242217 | 2026-06-07 17:05:29 | E: ---, Cl 35s Con Av Batallon Caldas, Autopista Sur, Bogotã D.C, Colombia
+WOY682 | 4.5683817,-74.1028670 | 2026-06-07 17:05:11 | E: ---, Cl 33 Con Cr 10c Sur, San Luis, Bogotã D.C, Colombia
+WPQ084 | 4.5061760,-74.1035690 | 2026-06-07 17:03:09 | E: ---, El Bosque, Usme, Bogotá, Distrito Capital, Colombia
+ZGA89H | 4.5577202,-74.1144562 | 2026-06-07 16:55:14 | E: ---, Dg 48k Con Tv 5qbisa Sur, Callejon Santa Barbara, Bogotã D.C, Colombia
+
+Placas sin respuesta GPS:
+JVK669
+LJU098
+KMZ509
+KNZ285
+JTZ060
+EQP286
+WOU132
+SSX505
+WGQ138
+WLK160
+WDG826
+TSO943
+WCW905
+TGV952
+TLM380
+WDE168
+EYY075
+WLR868
+WFV928
+TSX180
+WGY913
+NNZ926
+WMZ346
+WLP921
+WLM363
+WMZ342
+TSX107
+WHT319
+WGK094
+TDK996
+TSP760
+GUV695
+UFZ718
+WGP016
+WFU820
+WFV555
+TAU154
+WFV368
+VCX938
+WLK842
+WLS651
+JTY407
+EQQ843
+WGO388
+WFL559
+WHQ464
+LUX010
+WHS249
+NHQ849
+WMN276
+EQQ474
+GES962
+WPS221
+WHO736
+KOK429
+JUY478
+WLK695
+WHS604
+NOY304
+NOX768
+SSW213
+NUX093
+NUV235
+NOK892
+TFR580
+WDC248
+NTQ297
+TTQ083
+LPY919
+SPU536
+WEI984
+WOW506
+TLM472
+TEK351
+LCN506
+WGO567
+NUX645
+GUQ333
+NOY311
+SZU344
+GEU781
+GUV030
+TGV593
+THY077
+WLS654
+SZN062
+JTX322
+TSO011
+LJU785
+SMB023
+SXU556
+FSU867
+WGP909
+TSP134
+NUZ158
+GEU895
+SXY483
+TSP744
+TTX546
+GUQ702
+SWS829
+EQZ937
+WPP213
+NUY919
+NUW930
+WCM937
+WGQ919
+NUX821
+SNW878
+JOW001
+WMZ323
+WGQ896
+WOX692
+TGL110
+WGY111
+ETT470
+WEQ894
+WFU967
+LZM440
+TUP071
+QJL506
+NUV362
+GET557
+WGP990
+TMP889
+WNS434
+JTZ292
+KMZ448
+QJZ850
+EQQ917
+TSN757
+JVK045
+WNN935
+JTP300
+WHP906
+NOW534
+LLL581
+WGO893
+NOW796
+TFT637
+TFR018
+UFU857
+LUX188
+WFW148
+WGI381
+WDD269
+FSV339
+WMZ923
+MYR599
+THW241
+TZS483
+FSU562
+SQW070
+WPN187
+PMV233
+SZZ173
+TGX675
+WLM553
+FUZ804
+WLT836

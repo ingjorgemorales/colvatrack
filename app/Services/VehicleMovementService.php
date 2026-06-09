@@ -1,0 +1,59 @@
+<?php
+
+namespace App\Services;
+
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+
+class VehicleMovementService
+{
+    public function decorate(Collection $vehicles): Collection
+    {
+        $ids = $vehicles->pluck('id')->filter()->values();
+        if ($ids->isEmpty()) {
+            return $vehicles;
+        }
+
+        $threshold = (float) env('GPS_MOVEMENT_DISTANCE_THRESHOLD_METERS', 25);
+        $ranked = DB::table('vehicle_locations')
+            ->select(['id', 'vehicle_id', 'latitude', 'longitude', 'speed', 'gps_datetime', 'created_at'])
+            ->selectRaw('ROW_NUMBER() OVER (PARTITION BY vehicle_id ORDER BY COALESCE(gps_datetime, created_at) DESC, id DESC) as rn')
+            ->whereIn('vehicle_id', $ids);
+
+        $latest = DB::query()
+            ->fromSub($ranked, 'ranked_locations')
+            ->where('rn', '<=', 2)
+            ->get()
+            ->groupBy('vehicle_id');
+
+        return $vehicles->map(function ($vehicle) use ($latest, $threshold) {
+            $points = $latest->get($vehicle->id, collect())->sortBy('rn')->values();
+            $current = $points->get(0);
+            $previous = $points->get(1);
+            $distance = ($current && $previous) ? $this->distanceMeters($current, $previous) : 0.0;
+            $isMoving = $current && $previous && $distance >= $threshold;
+
+            $vehicle->setAttribute('is_moving', $isMoving);
+            $vehicle->setAttribute('movement_distance_meters', round($distance, 1));
+            $vehicle->setAttribute('movement_threshold_meters', $threshold);
+            $vehicle->setAttribute('movement_basis', $current && $previous ? 'position_delta' : 'insufficient_history');
+            $vehicle->setAttribute('previous_latitude', $previous?->latitude);
+            $vehicle->setAttribute('previous_longitude', $previous?->longitude);
+
+            return $vehicle;
+        });
+    }
+
+    private function distanceMeters(object $a, object $b): float
+    {
+        $earthRadius = 6371000;
+        $lat1 = deg2rad((float) $a->latitude);
+        $lat2 = deg2rad((float) $b->latitude);
+        $deltaLat = deg2rad((float) $b->latitude - (float) $a->latitude);
+        $deltaLng = deg2rad((float) $b->longitude - (float) $a->longitude);
+
+        $value = sin($deltaLat / 2) ** 2 + cos($lat1) * cos($lat2) * sin($deltaLng / 2) ** 2;
+
+        return $earthRadius * 2 * atan2(sqrt($value), sqrt(1 - $value));
+    }
+}
