@@ -86,7 +86,6 @@ class GpsServiceTrackService
                 $vehicle->forceFill([
                     'external_gps_id' => $vehicle->external_gps_id ?: $movil,
                     'gps_provider_id' => $vehicle->gps_provider_id ?: $provider->id,
-                    'status' => 'active',
                 ])->save();
             }
 
