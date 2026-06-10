@@ -16,7 +16,7 @@ const stockForms = ref({});
 function formFor(vehicleId, itemId, current = null) { const key = `${vehicleId}-${itemId}`; if (!stockForms.value[key]) stockForms.value[key] = useForm({ vehicle_id: vehicleId, inventory_item_id: itemId, quantity_total: current?.quantity_total ?? 0, quantity_available: current?.quantity_available ?? 0 }); return stockForms.value[key]; }
 function saveStock(form) { form.patch('/inventario/stock', { preserveScroll: true }); }
 function assignedItemIds(vehicle) { return new Set(vehicle.inventory.map(r => r.inventory_item_id)); }
-function assignToVehicle(vehicle) { addForm.vehicle_id = vehicle.id; addForm.transform(d => ({ ...d, quantity_available: d.quantity_total })).post('/inventario/stock', { preserveScroll: true, onSuccess: () => addForm.reset() }); }
+function assignToVehicle(vehicle) { addForm.vehicle_id = vehicle.id; addForm.transform(d => ({ ...d, quantity_available: d.quantity_total })).patch('/inventario/stock', { preserveScroll: true, onSuccess: () => addForm.reset() }); }
 function startEdit(item) { editForm.name = item.name; editForm.category_name = item.category?.name ?? ''; editForm.unit = item.unit; editForm.description = item.description ?? ''; editingItem.value = item.id; }
 function saveEdit(item) { editForm.patch(`/inventario/items/${item.id}`, { preserveScroll: true, onSuccess: () => { editingItem.value = null; editForm.reset(); } }); }
 function toggleStatus(item) { useForm({}).patch(`/inventario/items/${item.id}/status`, { preserveScroll: true }); }
