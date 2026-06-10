@@ -15,6 +15,7 @@ class InventoryController extends Controller
     {
         $user = auth()->user();
         $search = $request->get('search', '');
+        $toolId = $request->get('tool_id', '');
         $perPage = min((int) $request->get('per_page', 10), 100);
 
         $vehicles = Vehicle::with(['driver','inventory.item.category'])
@@ -23,13 +24,14 @@ class InventoryController extends Controller
                 $q->where('plate', 'like', "%{$search}%")
                   ->orWhereHas('driver', fn($q) => $q->where('name', 'like', "%{$search}%"));
             }))
+            ->when($toolId, fn($q) => $q->whereHas('inventory', fn($q) => $q->where('inventory_item_id', $toolId)))
             ->orderBy('plate')
             ->paginate($perPage)
             ->withQueryString();
 
         return Inertia::render('Inventory/Index', [
             'vehicles' => $vehicles,
-            'filters' => ['search' => $search, 'per_page' => $perPage],
+            'filters' => ['search' => $search, 'tool_id' => $toolId, 'per_page' => $perPage],
             'categories' => InventoryCategory::orderBy('name')->get(),
             'items' => InventoryItem::with('category')->withSum('vehicleInventories', 'quantity_total')->where('status', 'active')->orderBy('name')->get(),
             'movements' => InventoryMovement::with(['vehicle','item'])->latest('created_at')->limit(25)->get(),
