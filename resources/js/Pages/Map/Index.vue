@@ -278,6 +278,6 @@ watch([query, status, availability, selectedTechnicianId, distance], () => rende
       <Link v-if="page.props.auth?.user?.role?.name === 'Administrador'" href="/vehiculos" class="rounded bg-white px-3 py-2 font-semibold text-[#123f6e] shadow-sm">Gestionar vehiculos</Link>
     </section>
 
-    <section class="rounded-md border border-slate-200 bg-white p-4 shadow-sm"><div ref="mapEl" class="h-[58vh] min-h-[520px]"></div></section>
+    <section class="rounded-md border border-slate-200 bg-white p-4 shadow-sm"><div ref="mapEl" class="h-[58vh] min-h-[300px] sm:min-h-[520px]"></div></section>
   </AppLayout>
 </template>

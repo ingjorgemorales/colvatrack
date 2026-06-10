@@ -204,7 +204,7 @@ onMounted(() => {
 
     <section class="grid gap-4 xl:grid-cols-[1fr_360px]">
       <div class="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
-        <div ref="mapEl" class="h-[62vh] min-h-[540px]"></div>
+        <div ref="mapEl" class="h-[62vh] min-h-[300px] sm:min-h-[540px]"></div>
       </div>
       <aside class="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
         <h2 class="mb-4 flex items-center gap-2 text-lg font-semibold text-[#123f6e]"><MapPin class="h-5 w-5" /> Detalle</h2>
