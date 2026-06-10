@@ -55,10 +55,12 @@ const toggleNotif = () => {
 };
 
 const markAsRead = async (n) => {
-  if (n.read_at) return;
-  await axios.patch(`/api/notifications/${n.id}/read`);
-  n.read_at = new Date().toISOString();
-  unreadCount.value = Math.max(0, unreadCount.value - 1);
+  if (!n.read_at) {
+    n.read_at = new Date().toISOString();
+    unreadCount.value = Math.max(0, unreadCount.value - 1);
+    await axios.patch(`/api/notifications/${n.id}/read`);
+  }
+  if (n.url) router.visit(n.url);
 };
 
 const markAllAsRead = async () => {
