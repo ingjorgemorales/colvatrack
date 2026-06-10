@@ -12,11 +12,22 @@ use Inertia\Inertia;
 
 class UserController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $perPage = min((int) $request->integer('per_page', 10), 100);
+        $users = User::with('role', 'assignedVehicle');
+        if ($request->filled('search')) {
+            $search = $request->string('search');
+            $users->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%$search%")
+                  ->orWhere('last_name', 'like', "%$search%")
+                  ->orWhere('email', 'like', "%$search%");
+            });
+        }
         return Inertia::render('Users/Index', [
-            'users' => User::with('role', 'assignedVehicle')->latest()->paginate(10),
+            'users' => $users->latest()->paginate($perPage)->withQueryString(),
             'roles' => Role::orderBy('name')->get(),
+            'filters' => $request->only('search', 'per_page'),
         ]);
     }
 
