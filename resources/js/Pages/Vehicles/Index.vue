@@ -21,8 +21,8 @@ const deactivate = (vehicle) => { if (confirm(`Desactivar vehiculo ${vehicle.pla
         <div class="relative"><Search class="absolute left-3 top-3.5 h-5 w-5 text-slate-400" /><input v-model="search" @keyup.enter="apply" class="w-full rounded-md border border-slate-300 py-3 pl-10 pr-3" placeholder="Buscar placa, marca o modelo" /></div>
         <select v-model="status" class="rounded-md border border-slate-300 px-3 py-3"><option value="">Todos los estados</option><option value="active">Activo</option><option value="maintenance">Mantenimiento</option><option value="inactive">Inactivo</option></select>
         <select v-model="perPage" @change="apply" class="rounded-md border border-slate-300 px-3 py-3"><option value="25">25 por pagina</option><option value="50">50 por pagina</option><option value="100">100 por pagina</option></select>
-        <button @click="apply" class="rounded-md border border-[#123f6e] px-4 py-3 font-semibold text-[#123f6e]">Filtrar</button>
-        <button @click="clearFilters" class="inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 px-4 py-3 font-semibold text-slate-700"><X class="h-4 w-4" /> Limpiar</button>
+        <button @click="apply" class="cursor-pointer rounded-md bg-[#123f6e] px-4 py-3 font-semibold text-white transition-colors hover:bg-[#0e2d52]">Filtrar</button>
+        <button @click="clearFilters" class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-md border border-[#123f6e] px-4 py-3 font-semibold text-[#123f6e] transition-colors hover:bg-[#123f6e] hover:text-white"><X class="h-4 w-4" /> Limpiar</button>
         <Link href="/vehiculos/create" class="inline-flex items-center justify-center gap-2 rounded-md bg-[#123f6e] px-4 py-3 font-semibold text-white"><Plus class="h-5 w-5" /> Nuevo</Link>
       </div>
 

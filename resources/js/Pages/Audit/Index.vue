@@ -39,7 +39,7 @@ function shortJson(value) {
           <input v-model="form.date_from" type="date" class="rounded-md border border-slate-300 px-3 py-3" />
           <input v-model="form.date_to" type="date" class="rounded-md border border-slate-300 px-3 py-3" />
         </div>
-        <div class="mt-4 flex gap-3"><button class="rounded-md bg-[#123f6e] px-4 py-3 font-semibold text-white">Buscar</button><button type="button" class="rounded-md border border-slate-300 px-4 py-3 font-semibold text-slate-700" @click="clear">Limpiar</button></div>
+        <div class="mt-4 flex gap-3"><button class="cursor-pointer rounded-md bg-[#123f6e] px-4 py-3 font-semibold text-white transition-colors hover:bg-[#0e2d52]">Buscar</button><button type="button" class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-md border border-[#123f6e] px-4 py-3 font-semibold text-[#123f6e] transition-colors hover:bg-[#123f6e] hover:text-white" @click="clear">Limpiar</button></div>
       </form>
 
       <section class="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
