@@ -26,10 +26,11 @@ class ToolRequestWebController extends Controller
                     ->orWhereHas('driver', fn ($driver) => $driver->where('name', 'like', "%$search%")->orWhere('last_name', 'like', "%$search%"));
             });
         }
+        $perPage = min((int) $request->integer('per_page', 10), 100);
         return Inertia::render('Requests/Index', [
-            'requests' => $query->paginate(15)->withQueryString(),
+            'requests' => $query->paginate($perPage)->withQueryString(),
             'role' => $user->role?->name,
-            'filters' => $request->only('search','status','priority'),
+            'filters' => $request->only('search','status','priority','per_page'),
         ]);
     }
     public function create(Request $request)

@@ -26,9 +26,10 @@ class AuditController extends Controller
             $query->whereDate('created_at', '<=', $filters['date_to']);
         }
 
+        $perPage = min((int) $request->integer('per_page', 10), 100);
         return Inertia::render('Audit/Index', [
-            'logs' => $query->paginate(25)->withQueryString(),
-            'filters' => $filters,
+            'logs' => $query->paginate($perPage)->withQueryString(),
+            'filters' => array_merge($filters, ['per_page' => $perPage]),
             'users' => User::orderBy('name')->get(['id', 'name', 'last_name', 'email']),
             'modules' => AuditLog::query()->select('module')->distinct()->orderBy('module')->pluck('module'),
             'actions' => AuditLog::query()->select('action')->distinct()->orderBy('action')->pluck('action'),

@@ -2,9 +2,10 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { Search, ShieldCheck } from '@lucide/vue';
-import { reactive } from 'vue';
+import { reactive, ref } from 'vue';
 
 const props = defineProps({ logs: Object, filters: Object, users: Array, modules: Array, actions: Array });
+const perPage = ref(props.filters?.per_page ?? 10);
 const form = reactive({
   module: props.filters?.module || '',
   action: props.filters?.action || '',
@@ -13,10 +14,11 @@ const form = reactive({
   date_to: props.filters?.date_to || '',
 });
 function search() {
-  router.get('/auditoria', form, { preserveState: true, replace: true });
+  router.get('/auditoria', { ...form, per_page: perPage.value }, { preserveState: true, replace: true });
 }
 function clear() {
   Object.keys(form).forEach((key) => { form[key] = ''; });
+  perPage.value = 10;
   search();
 }
 function shortJson(value) {
@@ -39,7 +41,7 @@ function shortJson(value) {
           <input v-model="form.date_from" type="date" class="rounded-md border border-slate-300 px-3 py-3" />
           <input v-model="form.date_to" type="date" class="rounded-md border border-slate-300 px-3 py-3" />
         </div>
-        <div class="mt-4 flex gap-3"><button class="cursor-pointer rounded-md bg-[#123f6e] px-4 py-3 font-semibold text-white transition-colors hover:bg-[#0e2d52]">Buscar</button><button type="button" class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-md border border-[#123f6e] px-4 py-3 font-semibold text-[#123f6e] transition-colors hover:bg-[#123f6e] hover:text-white" @click="clear">Limpiar</button></div>
+        <div class="mt-4 flex flex-wrap items-center gap-3"><select v-model="perPage" @change="search" class="w-full rounded-md border border-slate-300 px-3 py-3 text-sm sm:w-auto"><option value="10">10 por pag.</option><option value="25">25 por pag.</option><option value="50">50 por pag.</option><option value="100">100 por pag.</option></select><button class="cursor-pointer rounded-md bg-[#123f6e] px-4 py-3 font-semibold text-white transition-colors hover:bg-[#0e2d52]">Buscar</button><button type="button" class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-md border border-[#123f6e] px-4 py-3 font-semibold text-[#123f6e] transition-colors hover:bg-[#123f6e] hover:text-white" @click="clear">Limpiar</button></div>
       </form>
 
       <section class="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
@@ -62,11 +64,7 @@ function shortJson(value) {
           </table>
         </div>
         <div class="space-y-2 sm:hidden"><div v-for="log in logs.data" :key="log.id" class="rounded border border-slate-100 bg-slate-50 p-3 text-sm"><div class="mb-1 flex items-start justify-between gap-2"><div><div class="font-medium text-slate-900">{{ log.user?.name ?? 'Sistema' }} {{ log.user?.last_name ?? '' }}</div><div class="text-xs text-slate-500">{{ log.user?.email }}</div></div><span class="shrink-0 rounded bg-[#e6eef7] px-2 py-1 text-xs font-semibold text-[#123f6e]">{{ log.action }}</span></div><div class="text-xs text-slate-500 mb-1">{{ log.created_at }}</div><div class="grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-slate-600"><div><span class="font-medium text-slate-700">Modulo:</span> {{ log.module }}</div><div><span class="font-medium text-slate-700">IP:</span> {{ log.ip_address }}</div></div><p class="mt-1 text-xs text-slate-600">{{ log.description }}</p><p v-if="log.new_values" class="mt-1 text-xs text-slate-400">{{ shortJson(log.new_values) }}</p></div><p v-if="!logs.data.length" class="py-4 text-center text-sm text-slate-500">No hay registros con esos filtros.</p></div>
-        <div class="mt-4 flex items-center justify-between text-sm">
-          <Link v-if="logs.prev_page_url" :href="logs.prev_page_url" class="rounded-md border border-slate-300 px-3 py-2 font-semibold text-slate-700">Anterior</Link><span v-else></span>
-          <span class="text-slate-500">Pagina {{ logs.current_page }} de {{ logs.last_page }}</span>
-          <Link v-if="logs.next_page_url" :href="logs.next_page_url" class="rounded-md border border-slate-300 px-3 py-2 font-semibold text-slate-700">Siguiente</Link><span v-else></span>
-        </div>
+        <div v-if="logs.last_page > 1" class="mt-4 flex flex-wrap items-center justify-center gap-1 sm:gap-2"><Link v-for="link in logs.links" :key="link.label" :href="link.url || '#'" preserve-scroll class="rounded-md border px-2 py-2 text-xs font-semibold sm:px-3 sm:text-sm" :class="[link.active ? 'border-[#123f6e] bg-[#123f6e] text-white' : 'border-slate-200 bg-white text-slate-700', !link.url ? 'pointer-events-none opacity-40' : 'hover:bg-[#edf3fa]']" v-html="link.label" /></div>
       </section>
     </section>
   </AppLayout>

@@ -15,7 +15,7 @@ class InventoryController extends Controller
     {
         $user = auth()->user();
         $search = $request->get('search', '');
-        $perPage = min((int) $request->get('per_page', 25), 100);
+        $perPage = min((int) $request->get('per_page', 10), 100);
 
         $vehicles = Vehicle::with(['driver','inventory.item.category'])
             ->when($user->hasRole('Conductor'), fn($q) => $q->where('driver_id', $user->id))

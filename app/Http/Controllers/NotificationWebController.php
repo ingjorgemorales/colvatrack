@@ -7,9 +7,13 @@ use Inertia\Inertia;
 
 class NotificationWebController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return Inertia::render('Notifications/Index', ['notifications' => Notification::where('user_id', auth()->id())->latest()->paginate(20)]);
+        $perPage = min((int) $request->integer('per_page', 10), 100);
+        return Inertia::render('Notifications/Index', [
+            'notifications' => Notification::where('user_id', auth()->id())->latest()->paginate($perPage)->withQueryString(),
+            'filters' => ['per_page' => $perPage],
+        ]);
     }
 
     public function read(Notification $notification)

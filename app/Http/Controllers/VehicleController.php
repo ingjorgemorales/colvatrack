@@ -14,7 +14,7 @@ class VehicleController extends Controller
 {
     public function index(Request $request)
     {
-        $perPage = max(12, min((int) $request->integer('per_page', 25), 100));
+        $perPage = min((int) $request->integer('per_page', 10), 100);
         $query = Vehicle::with(['driver', 'provider'])->latest();
         if ($request->filled('search')) {
             $search = $request->string('search');

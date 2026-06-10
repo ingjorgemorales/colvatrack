@@ -14,7 +14,7 @@ class GpsProviderController extends Controller
         $today = now()->toDateString();
         $providers = GpsProvider::withCount('vehicles')
             ->latest()
-            ->paginate(12)
+            ->paginate(10)
             ->through(function (GpsProvider $provider) use ($today) {
                 $lastLog = $provider->logs()->latest('id')->first(['id', 'status', 'response_code', 'response_count', 'requested_at', 'created_at', 'error_message']);
                 $todayLogs = GpsRequestLog::where('gps_provider_id', $provider->id)

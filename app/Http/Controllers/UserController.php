@@ -15,7 +15,7 @@ class UserController extends Controller
     public function index()
     {
         return Inertia::render('Users/Index', [
-            'users' => User::with('role', 'assignedVehicle')->latest()->paginate(12),
+            'users' => User::with('role', 'assignedVehicle')->latest()->paginate(10),
             'roles' => Role::orderBy('name')->get(),
         ]);
     }
