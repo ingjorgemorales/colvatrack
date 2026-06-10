@@ -3,6 +3,7 @@ namespace App\Services;
 
 use App\Events\InventoryUpdated;
 use App\Models\InventoryMovement;
+use App\Models\Notification;
 use App\Models\VehicleInventory;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -16,7 +17,14 @@ class InventoryService
             $previous = $row->quantity_available;
             $row->update(['quantity_total' => $total, 'quantity_available' => $available, 'status' => 'active']);
             InventoryMovement::create(['vehicle_id' => $vehicleId, 'inventory_item_id' => $itemId, 'movement_type' => 'stock_update', 'quantity' => abs($available - $previous), 'previous_available' => $previous, 'new_available' => $available, 'created_by' => $userId, 'comment' => 'Actualizacion manual de inventario', 'created_at' => now()]);
-            try { broadcast(new InventoryUpdated($row->vehicle))->toOthers(); } catch (\Throwable $e) { /* WebSocket no disponible */ }
+            $vehicle = $row->vehicle;
+            if ($vehicle->driver_id) {
+                try {
+                    $notif = Notification::create(['user_id' => $vehicle->driver_id, 'title' => 'Inventario actualizado', 'message' => 'El inventario del vehiculo '.$vehicle->plate.' fue actualizado.', 'type' => 'info', 'data_json' => null]);
+                    broadcast(new \App\Events\NotificationCreated($notif))->toOthers();
+                } catch (\Throwable $e) { /* WebSocket no disponible */ }
+            }
+            try { broadcast(new InventoryUpdated($vehicle))->toOthers(); } catch (\Throwable $e) { /* WebSocket no disponible */ }
             return $row->fresh();
         });
     }
