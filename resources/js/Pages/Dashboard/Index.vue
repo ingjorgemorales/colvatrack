@@ -4,13 +4,23 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import { Bell, Car, CheckCircle, ClipboardList, MapPin, MessageCircle, PackageCheck, Users } from '@lucide/vue';
 const props = defineProps({ stats: Array, recentRequests: Array, role: String, notifications: Array });
 const icons = { Bell, Car, CheckCircle, ClipboardList, MapPin, MessageCircle, PackageCheck, Users };
+const iconColors = {
+  ClipboardList: 'bg-indigo-100 text-indigo-700',
+  CheckCircle: 'bg-emerald-100 text-emerald-700',
+  MapPin: 'bg-sky-100 text-sky-700',
+  PackageCheck: 'bg-teal-100 text-teal-700',
+  MessageCircle: 'bg-violet-100 text-violet-700',
+  Car: 'bg-amber-100 text-amber-700',
+  Bell: 'bg-rose-100 text-rose-700',
+  Users: 'bg-slate-100 text-slate-700',
+};
 </script>
 <template>
   <Head title="Dashboard" />
   <AppLayout title="Dashboard">
     <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       <Link v-for="card in stats" :key="card.label" :href="card.route || '#'" class="rounded-md border border-slate-200 bg-white p-5 shadow-sm transition-colors hover:bg-[#edf3fa] cursor-pointer">
-        <div class="flex items-center justify-between"><div><p class="text-sm font-medium text-slate-500">{{ card.label }}</p><p class="mt-2 text-3xl font-semibold text-slate-950">{{ card.value }}</p></div><span class="grid h-11 w-11 place-items-center rounded-md bg-[#e6eef7] text-[#123f6e]"><component :is="icons[card.icon] ?? ClipboardList" class="h-6 w-6" /></span></div>
+        <div class="flex items-center justify-between"><div><p class="text-sm font-medium text-slate-500">{{ card.label }}</p><p class="mt-2 text-3xl font-semibold text-slate-950">{{ card.value }}</p></div><span class="grid h-11 w-11 place-items-center rounded-md" :class="iconColors[card.icon] ?? 'bg-[#e6eef7] text-[#123f6e]'"><component :is="icons[card.icon] ?? ClipboardList" class="h-6 w-6" /></span></div>
       </Link>
     </section>
     <section class="mt-6 grid gap-6 xl:grid-cols-[1.2fr_.8fr]">
