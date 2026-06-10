@@ -1,16 +1,21 @@
 <script setup>
 import { Head, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
-import { Boxes, Plus, Save } from '@lucide/vue';
+import { Boxes, Edit3, Plus, Save, ToggleLeft, ToggleRight } from '@lucide/vue';
 import { ref } from 'vue';
 const props = defineProps({ vehicles: Array, categories: Array, items: Array, movements: Array, canManageCatalog: Boolean });
 const itemForm = useForm({ category_name: '', name: '', description: '', unit: 'unidad' });
+const editForm = useForm({ name: '', category_name: '', unit: '', description: '' });
+const editingItem = ref(null);
 const addForm = useForm({ vehicle_id: null, inventory_item_id: '', quantity_total: 0, quantity_available: 0 });
 const stockForms = ref({});
 function formFor(vehicleId, itemId, current = null) { const key = `${vehicleId}-${itemId}`; if (!stockForms.value[key]) stockForms.value[key] = useForm({ vehicle_id: vehicleId, inventory_item_id: itemId, quantity_total: current?.quantity_total ?? 0, quantity_available: current?.quantity_available ?? 0 }); return stockForms.value[key]; }
 function saveStock(form) { form.patch('/inventario/stock', { preserveScroll: true }); }
 function assignedItemIds(vehicle) { return new Set(vehicle.inventory.map(r => r.inventory_item_id)); }
 function assignToVehicle(vehicle) { addForm.vehicle_id = vehicle.id; addForm.post('/inventario/stock', { preserveScroll: true, onSuccess: () => addForm.reset() }); }
+function startEdit(item) { editForm.name = item.name; editForm.category_name = item.category?.name ?? ''; editForm.unit = item.unit; editForm.description = item.description ?? ''; editingItem.value = item.id; }
+function saveEdit(item) { editForm.patch(`/inventario/items/${item.id}`, { preserveScroll: true, onSuccess: () => { editingItem.value = null; editForm.reset(); } }); }
+function toggleStatus(item) { useForm({}).patch(`/inventario/items/${item.id}/status`, { preserveScroll: true }); }
 </script>
 <template>
   <Head title="Inventario" />
@@ -25,6 +30,7 @@ function assignToVehicle(vehicle) { addForm.vehicle_id = vehicle.id; addForm.pos
       </div>
       <aside class="space-y-5">
         <section v-if="canManageCatalog" class="rounded-md border border-slate-200 bg-white p-5 shadow-sm"><h2 class="mb-4 flex items-center gap-2 text-lg font-semibold text-[#123f6e]"><Plus class="h-5 w-5" /> Nueva herramienta</h2><form class="space-y-3" @submit.prevent="itemForm.post('/inventario/items', { preserveScroll: true, onSuccess: () => itemForm.reset() })"><input v-model="itemForm.category_name" class="w-full rounded-md border border-slate-300 px-3 py-3" placeholder="Categoria" /><input v-model="itemForm.name" class="w-full rounded-md border border-slate-300 px-3 py-3" placeholder="Herramienta" /><input v-model="itemForm.unit" class="w-full rounded-md border border-slate-300 px-3 py-3" placeholder="Unidad" /><textarea v-model="itemForm.description" class="w-full rounded-md border border-slate-300 px-3 py-3" placeholder="Descripcion"></textarea><p v-for="error in itemForm.errors" class="text-sm text-red-600">{{ error }}</p><button class="w-full rounded-md bg-[#123f6e] px-4 py-3 font-semibold text-white">Guardar herramienta</button></form></section>
+        <section v-if="canManageCatalog" class="rounded-md border border-slate-200 bg-white p-5 shadow-sm"><h2 class="mb-4 flex items-center gap-2 text-lg font-semibold text-[#123f6e]"><Boxes class="h-5 w-5" /> Herramientas del catálogo</h2><div class="space-y-2"><div v-for="item in items" :key="item.id" class="rounded border border-slate-100 p-3 text-sm"><div v-if="editingItem === item.id"><form class="space-y-2" @submit.prevent="saveEdit(item)"><input v-model="editForm.name" class="w-full rounded border border-slate-300 px-2 py-1 text-sm" placeholder="Nombre" /><input v-model="editForm.category_name" class="w-full rounded border border-slate-300 px-2 py-1 text-sm" placeholder="Categoria" /><input v-model="editForm.unit" class="w-full rounded border border-slate-300 px-2 py-1 text-sm" placeholder="Unidad" /><textarea v-model="editForm.description" class="w-full rounded border border-slate-300 px-2 py-1 text-sm" placeholder="Descripcion"></textarea><div class="flex gap-2"><button class="rounded bg-[#123f6e] px-3 py-1 text-xs font-semibold text-white" :disabled="editForm.processing">Guardar</button><button type="button" class="text-xs text-slate-500 underline" @click="editingItem = null">Cancelar</button></div></form></div><div v-else class="flex items-center justify-between gap-2"><div><div class="font-medium text-slate-900" :class="item.status !== 'active' ? 'text-slate-400 line-through' : ''">{{ item.name }}</div><div class="text-xs text-slate-500">{{ item.category?.name }} · {{ item.unit }}</div></div><div class="flex items-center gap-1"><button @click="startEdit(item)" class="rounded p-1 text-slate-400 hover:text-slate-700" title="Editar"><Edit3 class="h-4 w-4" /></button><button @click="toggleStatus(item)" class="rounded p-1" :class="item.status === 'active' ? 'text-green-600 hover:text-green-800' : 'text-slate-400 hover:text-slate-700'" :title="item.status === 'active' ? 'Desactivar' : 'Activar'"><component :is="item.status === 'active' ? ToggleRight : ToggleLeft" class="h-5 w-5" /></button></div></div></div><p v-if="!items.length" class="text-sm text-slate-500">Sin herramientas en el catálogo.</p></div></section>
         <section class="rounded-md border border-slate-200 bg-white p-5 shadow-sm"><h2 class="mb-4 flex items-center gap-2 text-lg font-semibold text-[#123f6e]"><Boxes class="h-5 w-5" /> Movimientos recientes</h2><div class="space-y-3"><div v-for="m in movements" :key="m.id" class="rounded bg-slate-50 p-3 text-sm"><div class="font-medium text-slate-900">{{ m.item?.name }} - {{ m.vehicle?.plate }}</div><div class="text-slate-500">{{ m.movement_type }}: {{ m.quantity }} | {{ m.previous_available }} -> {{ m.new_available }}</div></div><p v-if="!movements.length" class="text-sm text-slate-500">Sin movimientos.</p></div></section>
       </aside>
     </section>

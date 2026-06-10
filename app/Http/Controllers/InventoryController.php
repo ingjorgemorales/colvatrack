@@ -42,6 +42,28 @@ class InventoryController extends Controller
         return back()->with('success', 'Herramienta registrada.');
     }
 
+    public function updateItem(Request $request, InventoryItem $item)
+    {
+        abort_unless($request->user()->hasRole('Administrador'), 403);
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:160'],
+            'category_name' => ['required', 'string', 'max:120'],
+            'unit' => ['required', 'string', 'max:40'],
+            'description' => ['nullable', 'string'],
+        ]);
+        $category = InventoryCategory::firstOrCreate(['name' => $data['category_name']], ['status' => 'active']);
+        $item->update(['name' => $data['name'], 'inventory_category_id' => $category->id, 'unit' => $data['unit'], 'description' => $data['description'] ?? null]);
+        return back()->with('success', 'Herramienta actualizada.');
+    }
+
+    public function toggleItemStatus(Request $request, InventoryItem $item)
+    {
+        abort_unless($request->user()->hasRole('Administrador'), 403);
+        $newStatus = $item->status === 'active' ? 'inactive' : 'active';
+        $item->update(['status' => $newStatus]);
+        return back()->with('success', "Herramienta {$item->name} " . ($newStatus === 'active' ? 'activada.' : 'desactivada.'));
+    }
+
     public function updateStock(Request $request, InventoryService $service)
     {
         $data = $request->validate([
