@@ -9,13 +9,17 @@ const props = defineProps({ title: { type: String, default: 'Dashboard' } });
 const page = usePage();
 const open = ref(false);
 const showNotif = ref(false);
+const showUserMenu = ref(false);
 const notifList = ref([]);
 const loadingNotif = ref(false);
 const user = computed(() => page.props.auth?.user ?? null);
 const flash = computed(() => page.props.flash ?? {});
 const unreadCount = ref(page.props.unread_notifications ?? 0);
 let notificationChannel = null;
-const closeHandler = (e) => { if (!e.target.closest('[data-notif]')) showNotif.value = false; };
+const closeHandler = (e) => {
+  if (!e.target.closest('[data-notif]')) showNotif.value = false;
+  if (!e.target.closest('[data-user-menu]')) showUserMenu.value = false;
+};
 const initials = computed(() => `${user.value?.name?.[0] ?? 'U'}${user.value?.last_name?.[0] ?? ''}`.toUpperCase());
 const permissions = computed(() => page.props.auth?.permissions ?? []);
 const can = (module, action = 'ver') => permissions.value.includes('*') || permissions.value.includes(`${module}.${action}`);
@@ -126,7 +130,7 @@ watch(() => page.url, () => { showNotif.value = false; });
               </div>
             </div>
             <div class="hidden sm:block leading-tight"><div class="font-medium text-slate-950">{{ user?.name }} {{ user?.last_name }}</div><div class="text-sm text-slate-600">{{ user?.role?.name }}</div></div>
-            <div class="grid h-9 w-9 place-items-center rounded-full bg-slate-200 text-sm font-semibold text-slate-800">{{ initials }}</div>
+            <div data-user-menu class="relative"><button @click="showUserMenu=!showUserMenu" class="grid h-9 w-9 place-items-center rounded-full bg-slate-200 text-sm font-semibold text-slate-800 hover:bg-slate-300 cursor-pointer">{{ initials }}</button><div v-if="showUserMenu" class="absolute right-0 top-full z-50 mt-2 w-44 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg"><Link href="/perfil" @click="showUserMenu=false" class="flex items-center gap-2 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"><UserCog class="h-4 w-4" /> Perfil</Link><hr class="border-slate-100" /><button @click="logout(); showUserMenu=false" class="flex w-full items-center gap-2 px-4 py-3 text-sm font-medium text-red-700 hover:bg-red-50"><LogOut class="h-4 w-4" /> Cerrar sesion</button></div></div>
           </div>
         </div>
         <div class="border-t border-slate-200 bg-[#e9eef8] px-4 py-4 sm:px-6"><h1 class="text-2xl font-semibold text-[#123f6e]">{{ props.title }}</h1></div>
