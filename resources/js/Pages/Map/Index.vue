@@ -274,7 +274,7 @@ watch([query, status, availability, selectedTechnicianId, distance], () => rende
       <span class="rounded bg-white px-3 py-2 shadow-sm"><span class="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-slate-500"></span>{{ stoppedCount }} sin cambio</span>
       <span class="rounded bg-white px-3 py-2 shadow-sm">{{ radiusLabel }}</span>
       <span class="rounded bg-white px-3 py-2 shadow-sm"><span class="mr-2 inline-block h-2.5 w-2.5 rounded-full" :class="refreshing ? 'bg-amber-500' : 'bg-emerald-500'"></span>Actualizado {{ lastRefreshLabel }}</span>
-      <button @click="refreshVehicles" class="rounded bg-white px-3 py-2 font-semibold text-[#123f6e] shadow-sm">Actualizar ahora</button>
+      <button @click="refreshVehicles" class="cursor-pointer rounded bg-white px-3 py-2 font-semibold text-[#123f6e] shadow-sm transition-colors hover:bg-[#edf3fa]">Actualizar ahora</button>
       <Link v-if="page.props.auth?.user?.role?.name === 'Administrador'" href="/vehiculos" class="rounded bg-white px-3 py-2 font-semibold text-[#123f6e] shadow-sm">Gestionar vehiculos</Link>
     </section>
 

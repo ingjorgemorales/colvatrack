@@ -28,7 +28,7 @@ const submit = () => isEdit ? form.patch(`/usuarios/${props.user.id}`) : form.po
         <label><span class="text-sm font-medium text-slate-600">Confirmar contraseña</span><input v-model="form.password_confirmation" type="password" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-3" /></label>
         <label class="flex items-center gap-3 md:col-span-2"><input v-model="form.must_change_password" type="checkbox" class="h-5 w-5" /> <span class="text-sm font-medium text-slate-700">Requiere cambio de contraseña en el primer inicio</span></label>
         <div v-if="Object.keys(form.errors).length" class="md:col-span-2 rounded-md bg-red-50 p-3 text-sm text-red-700"><p v-for="error in form.errors">{{ error }}</p></div>
-        <div class="md:col-span-2"><button class="inline-flex items-center gap-2 rounded-md bg-[#123f6e] px-5 py-3 font-semibold text-white"><Save class="h-5 w-5" /> Guardar usuario</button></div>
+        <div class="md:col-span-2"><button class="inline-flex cursor-pointer items-center gap-2 rounded-md bg-[#123f6e] px-5 py-3 font-semibold text-white transition-colors hover:bg-[#0e2d52]"><Save class="h-5 w-5" /> Guardar usuario</button></div>
       </form>
     </section>
   </AppLayout>

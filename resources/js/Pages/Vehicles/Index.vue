@@ -43,7 +43,7 @@ const deactivate = (vehicle) => { if (confirm(`Desactivar vehiculo ${vehicle.pla
               <td>{{ v.current_speed ?? 0 }} km/h</td>
               <td>{{ v.last_gps_datetime ?? '-' }}</td>
               <td><span class="rounded px-2 py-1" :class="v.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'">{{ v.status }}</span></td>
-              <td class="text-right"><Link :href="`/vehiculos/${v.id}/recorrido`" class="mr-2 inline-flex items-center gap-2 rounded-md border border-slate-200 px-3 py-2 font-semibold text-[#123f6e]"><MapPinned class="h-4 w-4" /> Recorrido</Link><Link :href="`/vehiculos/${v.id}/edit`" class="mr-2 inline-flex rounded-md border border-slate-200 p-2 text-[#123f6e]"><Pencil class="h-4 w-4" /></Link><button @click="deactivate(v)" class="inline-flex rounded-md border border-red-200 p-2 text-red-700"><Trash2 class="h-4 w-4" /></button></td>
+              <td class="text-right"><Link :href="`/vehiculos/${v.id}/recorrido`" class="mr-2 inline-flex items-center gap-2 rounded-md border border-slate-200 px-3 py-2 font-semibold text-[#123f6e]"><MapPinned class="h-4 w-4" /> Recorrido</Link><Link :href="`/vehiculos/${v.id}/edit`" class="mr-2 inline-flex rounded-md border border-slate-200 p-2 text-[#123f6e]"><Pencil class="h-4 w-4" /></Link><button @click="deactivate(v)" class="inline-flex cursor-pointer rounded-md border border-red-200 p-2 text-red-700 transition-colors hover:bg-red-50"><Trash2 class="h-4 w-4" /></button></td>
             </tr>
             <tr v-if="!vehicles.data.length"><td colspan="8" class="px-3 py-8 text-center text-slate-500">No hay vehiculos con esos filtros.</td></tr>
           </tbody>

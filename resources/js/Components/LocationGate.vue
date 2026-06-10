@@ -140,8 +140,8 @@ onBeforeUnmount(() => {
         <p class="mt-1 leading-5">{{ message }}</p>
         <p class="mt-1 text-xs text-slate-500">Se intenta actualizar cada {{ intervalSeconds }} segundos mientras tu sesion este abierta.</p>
         <div class="mt-3 flex flex-wrap gap-2">
-          <button @click="retry" class="inline-flex items-center gap-2 rounded-md bg-[#123f6e] px-3 py-2 font-semibold text-white"><LocateFixed class="h-4 w-4" /> Activar</button>
-          <button @click="refreshPage" class="inline-flex items-center gap-2 rounded-md border border-slate-300 px-3 py-2 font-semibold text-slate-700"><RefreshCw class="h-4 w-4" /> Revisar</button>
+          <button @click="retry" class="inline-flex cursor-pointer items-center gap-2 rounded-md bg-[#123f6e] px-3 py-2 font-semibold text-white transition-colors hover:bg-[#0e2d52]"><LocateFixed class="h-4 w-4" /> Activar</button>
+          <button @click="refreshPage" class="inline-flex cursor-pointer items-center gap-2 rounded-md border border-slate-300 px-3 py-2 font-semibold text-slate-700 transition-colors hover:bg-slate-50"><RefreshCw class="h-4 w-4" /> Revisar</button>
         </div>
       </div>
     </div>

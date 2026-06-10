@@ -109,7 +109,7 @@ function submit() {
         </div>
 
         <div v-if="Object.keys(form.errors).length" class="rounded-md bg-red-50 p-3 text-sm text-red-700"><p v-for="error in form.errors" :key="error">{{ error }}</p></div>
-        <div><button class="inline-flex items-center gap-2 rounded-md bg-[#123f6e] px-5 py-3 font-semibold text-white"><Save class="h-5 w-5" /> Guardar proveedor</button></div>
+        <div><button class="inline-flex cursor-pointer items-center gap-2 rounded-md bg-[#123f6e] px-5 py-3 font-semibold text-white transition-colors hover:bg-[#0e2d52]"><Save class="h-5 w-5" /> Guardar proveedor</button></div>
       </form>
     </section>
   </AppLayout>

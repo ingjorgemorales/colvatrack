@@ -88,7 +88,7 @@ watch(() => page.url, () => { showNotif.value = false; });
     <aside :class="['fixed inset-y-0 left-0 z-[9999] w-64 border-r border-slate-200 bg-white transition-transform lg:sticky lg:top-0 lg:h-screen lg:translate-x-0', open ? 'translate-x-0' : '-translate-x-full']">
       <div class="flex h-24 items-center justify-between border-b border-slate-200 px-4">
         <img :src="'/images/logo-login.png'" alt="Colvatel" class="max-h-16 w-full object-contain" />
-        <button class="lg:hidden" @click="open=false"><X class="h-5 w-5" /></button>
+        <button class="lg:hidden cursor-pointer" @click="open=false"><X class="h-5 w-5" /></button>
       </div>
       <nav class="space-y-1 overflow-y-auto p-2" style="height: calc(100% - 6rem)">
         <Link v-for="[label, href, Icon] in nav" :key="label" :href="href" @click="open=false" class="flex items-center gap-3 rounded-md px-3 py-3 text-[15px] font-medium text-slate-700 hover:bg-[#edf3fa] hover:text-[#123f6e]" :class="{'bg-[#e3ebf5] text-[#123f6e]': page.url === href || page.url.startsWith(href + '/')}">
@@ -102,7 +102,7 @@ watch(() => page.url, () => { showNotif.value = false; });
       <header class="sticky top-0 z-30 border-b border-slate-200 bg-[#e9eef8]">
         <div class="flex h-14 items-center justify-between px-4 sm:px-6">
           <div class="flex items-center gap-4">
-            <button class="lg:hidden" @click="open=true"><Menu class="h-6 w-6" /></button>
+            <button class="lg:hidden cursor-pointer" @click="open=true"><Menu class="h-6 w-6" /></button>
             <Link href="/dashboard" class="text-2xl font-semibold text-[#123f6e]">ColvaTrack</Link>
           </div>
           <div class="flex items-center gap-2 sm:gap-3 text-right">

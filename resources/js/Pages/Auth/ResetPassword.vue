@@ -20,11 +20,11 @@ const submit = () => {
       <h1 class="mb-5 text-2xl font-semibold text-[#123f6e]">Nueva contraseña</h1>
       <form class="space-y-4" @submit.prevent="submit">
         <input v-model="form.email" type="email" placeholder="Correo" class="w-full rounded-md border border-slate-300 px-3 py-3" />
-        <div class="relative"><input v-model="form.password" :type="showPassword ? 'text' : 'password'" placeholder="Nueva contraseña" class="w-full rounded-md border border-slate-300 px-3 py-3 pr-10" /><button type="button" @click="showPassword = !showPassword" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700"><component :is="showPassword ? EyeOff : Eye" class="h-5 w-5" /></button></div>
-        <div class="relative"><input v-model="form.password_confirmation" :type="showConfirm ? 'text' : 'password'" placeholder="Confirmar contraseña" class="w-full rounded-md border border-slate-300 px-3 py-3 pr-10" /><button type="button" @click="showConfirm = !showConfirm" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700"><component :is="showConfirm ? EyeOff : Eye" class="h-5 w-5" /></button></div>
+        <div class="relative"><input v-model="form.password" :type="showPassword ? 'text' : 'password'" placeholder="Nueva contraseña" class="w-full rounded-md border border-slate-300 px-3 py-3 pr-10" /><button type="button" @click="showPassword = !showPassword" class="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-slate-500 hover:text-slate-700"><component :is="showPassword ? EyeOff : Eye" class="h-5 w-5" /></button></div>
+        <div class="relative"><input v-model="form.password_confirmation" :type="showConfirm ? 'text' : 'password'" placeholder="Confirmar contraseña" class="w-full rounded-md border border-slate-300 px-3 py-3 pr-10" /><button type="button" @click="showConfirm = !showConfirm" class="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-slate-500 hover:text-slate-700"><component :is="showConfirm ? EyeOff : Eye" class="h-5 w-5" /></button></div>
         <p v-if="form.password_confirmation && !passwordsMatch()" class="text-sm text-red-600">Las contraseñas no coinciden</p>
         <p v-for="error in form.errors" class="text-sm text-red-600">{{ error }}</p>
-        <button class="w-full rounded-md bg-[#123f6e] px-4 py-3 font-semibold text-white" :disabled="form.processing || !passwordsMatch()">Actualizar contraseña</button>
+        <button class="w-full cursor-pointer rounded-md bg-[#123f6e] px-4 py-3 font-semibold text-white transition-colors hover:bg-[#0e2d52]" :disabled="form.processing || !passwordsMatch()">Actualizar contraseña</button>
       </form>
     </section>
   </main>

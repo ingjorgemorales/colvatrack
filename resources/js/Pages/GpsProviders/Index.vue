@@ -82,12 +82,12 @@ const statusClass = (status) => status === 'success' ? 'text-emerald-700' : stat
 
           <form class="mt-4 flex gap-2" @submit.prevent="test(p)">
             <input v-model="testForms[p.id].moviles" class="min-w-0 flex-1 rounded-md border border-slate-300 px-3 py-2" placeholder="WPQ084,ZGA89H" />
-            <button class="inline-flex items-center gap-2 rounded-md border border-[#123f6e] px-3 py-2 font-semibold text-[#123f6e]"><PlugZap class="h-4 w-4" /> Probar</button>
+            <button class="inline-flex cursor-pointer items-center gap-2 rounded-md border border-[#123f6e] px-3 py-2 font-semibold text-[#123f6e] transition-colors hover:bg-[#edf3fa]"><PlugZap class="h-4 w-4" /> Probar</button>
           </form>
 
           <div class="mt-4 flex gap-2">
             <Link :href="`/configuracion/gps/${p.id}/edit`" class="inline-flex rounded-md border border-slate-200 p-2 text-[#123f6e]"><Pencil class="h-4 w-4" /></Link>
-            <button @click="deactivate(p)" class="inline-flex rounded-md border border-red-200 p-2 text-red-700"><Trash2 class="h-4 w-4" /></button>
+            <button @click="deactivate(p)" class="inline-flex cursor-pointer rounded-md border border-red-200 p-2 text-red-700 transition-colors hover:bg-red-50"><Trash2 class="h-4 w-4" /></button>
           </div>
         </article>
       </div>

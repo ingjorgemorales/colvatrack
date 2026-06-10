@@ -16,7 +16,7 @@ const submit = () => form.post('/forgot-password');
       <form class="space-y-4" @submit.prevent="submit">
         <input v-model="form.email" type="email" placeholder="correo@colvatel.com" class="w-full rounded-md border border-slate-300 px-3 py-3 outline-none focus:border-[#123f6e]" />
         <p v-if="form.errors.email" class="text-sm text-red-600">{{ form.errors.email }}</p>
-        <button class="w-full rounded-md bg-[#123f6e] px-4 py-3 font-semibold text-white">Enviar enlace</button>
+        <button class="w-full cursor-pointer rounded-md bg-[#123f6e] px-4 py-3 font-semibold text-white transition-colors hover:bg-[#0e2d52]">Enviar enlace</button>
         <Link href="/login" class="block text-center text-sm font-medium text-[#123f6e]">Volver al login</Link>
       </form>
     </section>

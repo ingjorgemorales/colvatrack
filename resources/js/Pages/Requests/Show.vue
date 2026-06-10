@@ -183,7 +183,7 @@ onBeforeUnmount(() => { if(window.Echo && channelName) window.Echo.leave(channel
           <h2 class="mb-4 flex items-center gap-2 font-semibold text-[#123f6e]"><Truck class="h-5 w-5" /> Acciones del flujo</h2>
           <textarea v-model="commentForm.comment" class="mb-3 w-full rounded-md border border-slate-300 px-3 py-3" placeholder="Comentario opcional"></textarea>
           <div class="grid gap-2">
-            <button v-for="status in allowed" :key="status" @click="change(status)" class="rounded-md px-4 py-3 font-semibold text-white" :class="['rechazada','cancelada'].includes(status) ? 'bg-red-700' : 'bg-[#123f6e]'">{{ actionLabel(status) }}</button>
+            <button v-for="status in allowed" :key="status" @click="change(status)" class="cursor-pointer rounded-md px-4 py-3 font-semibold text-white transition-colors" :class="['rechazada','cancelada'].includes(status) ? 'bg-red-700 hover:bg-red-800' : 'bg-[#123f6e] hover:bg-[#0e2d52]'">{{ actionLabel(status) }}</button>
             <p v-if="!allowed.length" class="rounded-md bg-slate-50 p-3 text-sm text-slate-500">No tienes acciones pendientes para este estado.</p>
           </div>
           <p v-for="error in commentForm.errors" :key="error" class="mt-2 text-sm text-red-600">{{ error }}</p>
@@ -192,12 +192,12 @@ onBeforeUnmount(() => { if(window.Echo && channelName) window.Echo.leave(channel
         <section v-if="request.technician_latitude && request.technician_longitude" class="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
           <h2 class="mb-4 flex items-center gap-2 font-semibold text-[#123f6e]"><MapPin class="h-5 w-5" /> Ubicacion del tecnico</h2>
           <p class="mb-3 text-sm text-slate-600">{{ request.technician_address ?? 'Direccion no registrada' }}</p>
-          <button @click="openRouteMap" class="flex w-full items-center justify-center gap-2 rounded-md bg-[#123f6e] px-4 py-3 font-semibold text-white">
+          <button @click="openRouteMap" class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-md bg-[#123f6e] px-4 py-3 font-semibold text-white transition-colors hover:bg-[#0e2d52]">
             <MapPin class="h-4 w-4" /> Ver ruta en mapa
           </button>
         </section>
 
-        <section class="rounded-md border border-slate-200 bg-white p-5 shadow-sm"><h2 class="mb-3 flex items-center gap-2 font-semibold text-[#123f6e]"><MessageCircle class="h-5 w-5" /> Chat</h2><div ref="chatBox" class="mb-3 h-80 space-y-3 overflow-y-auto rounded-md bg-slate-50 p-3"><div v-for="m in messages" :key="m.id" class="rounded-md bg-white p-3 text-sm shadow-sm"><div class="mb-1 font-semibold text-[#123f6e]">{{ m.sender?.name ?? 'Usuario' }}</div><p class="text-slate-700">{{ m.message }}</p><p class="mt-1 text-xs text-slate-400">{{ m.created_at }}</p></div><p v-if="!messages.length" class="py-8 text-center text-sm text-slate-500">Sin mensajes todavia.</p></div><form class="flex gap-2" @submit.prevent="sendMessage"><input v-model="messageForm.message" class="min-w-0 flex-1 rounded-md border border-slate-300 px-3 py-3" placeholder="Escribir mensaje" /><button class="rounded-md bg-[#123f6e] px-4 text-white"><Send class="h-5 w-5" /></button></form><p v-for="error in messageForm.errors" :key="error" class="mt-2 text-sm text-red-600">{{ error }}</p></section>
+        <section class="rounded-md border border-slate-200 bg-white p-5 shadow-sm"><h2 class="mb-3 flex items-center gap-2 font-semibold text-[#123f6e]"><MessageCircle class="h-5 w-5" /> Chat</h2><div ref="chatBox" class="mb-3 h-80 space-y-3 overflow-y-auto rounded-md bg-slate-50 p-3"><div v-for="m in messages" :key="m.id" class="rounded-md bg-white p-3 text-sm shadow-sm"><div class="mb-1 font-semibold text-[#123f6e]">{{ m.sender?.name ?? 'Usuario' }}</div><p class="text-slate-700">{{ m.message }}</p><p class="mt-1 text-xs text-slate-400">{{ m.created_at }}</p></div><p v-if="!messages.length" class="py-8 text-center text-sm text-slate-500">Sin mensajes todavia.</p></div><form class="flex gap-2" @submit.prevent="sendMessage"><input v-model="messageForm.message" class="min-w-0 flex-1 rounded-md border border-slate-300 px-3 py-3" placeholder="Escribir mensaje" /><button class="cursor-pointer rounded-md bg-[#123f6e] px-4 text-white transition-colors hover:bg-[#0e2d52]"><Send class="h-5 w-5" /></button></form><p v-for="error in messageForm.errors" :key="error" class="mt-2 text-sm text-red-600">{{ error }}</p></section>
       </aside>
     </section>
     <Teleport to="body">
@@ -209,7 +209,7 @@ onBeforeUnmount(() => { if(window.Echo && channelName) window.Echo.leave(channel
               <p v-if="routeInfo" class="text-sm text-slate-500">{{ routeInfo.distance }} km · {{ routeInfo.duration }} min</p>
               <p v-else-if="locating" class="text-sm text-slate-500">Obteniendo ubicacion...</p>
             </div>
-            <button @click="closeRouteMap" class="rounded-md p-2 text-slate-500 hover:bg-slate-100"><X class="h-5 w-5" /></button>
+            <button @click="closeRouteMap" class="cursor-pointer rounded-md p-2 text-slate-500 transition-colors hover:bg-slate-100"><X class="h-5 w-5" /></button>
           </div>
           <div ref="mapEl" class="min-h-[460px] w-full flex-1"></div>
         </div>
