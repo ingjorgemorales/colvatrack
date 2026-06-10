@@ -11,18 +11,27 @@ use Inertia\Inertia;
 
 class InventoryController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $user = auth()->user();
+        $search = $request->get('search', '');
+        $perPage = min((int) $request->get('per_page', 25), 100);
+
         $vehicles = Vehicle::with(['driver','inventory.item.category'])
             ->when($user->hasRole('Conductor'), fn($q) => $q->where('driver_id', $user->id))
+            ->when($search, fn($q) => $q->where(function ($q) use ($search) {
+                $q->where('plate', 'like', "%{$search}%")
+                  ->orWhereHas('driver', fn($q) => $q->where('name', 'like', "%{$search}%"));
+            }))
             ->orderBy('plate')
-            ->get();
+            ->paginate($perPage)
+            ->withQueryString();
 
         return Inertia::render('Inventory/Index', [
             'vehicles' => $vehicles,
+            'filters' => ['search' => $search, 'per_page' => $perPage],
             'categories' => InventoryCategory::orderBy('name')->get(),
-            'items' => InventoryItem::with('category')->orderBy('name')->get(),
+            'items' => InventoryItem::with('category')->where('status', 'active')->orderBy('name')->get(),
             'movements' => InventoryMovement::with(['vehicle','item'])->latest('created_at')->limit(25)->get(),
             'canManageCatalog' => $user->hasRole('Administrador'),
         ]);
