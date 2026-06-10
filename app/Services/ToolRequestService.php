@@ -31,7 +31,7 @@ class ToolRequestService
                 $this->notifications->create($request->driver_id, 'Nueva solicitud de herramientas', 'El tecnico '.$request->technician?->name.' solicito herramientas del vehiculo '.$request->vehicle?->plate.'.', 'tool_request', ['tool_request_id' => $request->id]);
                 $this->mail->sendPlain($request->driver->email, 'Nueva solicitud ColvaTrack #'.$request->id, 'Tienes una nueva solicitud de herramientas para el vehiculo '.$request->vehicle?->plate.'.');
             }
-            broadcast(new ToolRequestCreated($request))->toOthers();
+            try { broadcast(new ToolRequestCreated($request))->toOthers(); } catch (\Throwable $e) { /* WebSocket no disponible */ }
             return $request;
         });
     }
@@ -68,7 +68,7 @@ class ToolRequestService
                 if (in_array($status, ['aceptada','rechazada','para_recoger','finalizada'], true)) { $this->mail->sendPlain($recipient->email, $title.' en ColvaTrack', $message); }
             }
 
-            broadcast(new ToolRequestStatusChanged($request))->toOthers();
+            try { broadcast(new ToolRequestStatusChanged($request))->toOthers(); } catch (\Throwable $e) { /* WebSocket no disponible */ }
             return $request;
         });
     }

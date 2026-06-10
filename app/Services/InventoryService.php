@@ -16,7 +16,7 @@ class InventoryService
             $previous = $row->quantity_available;
             $row->update(['quantity_total' => $total, 'quantity_available' => $available, 'status' => 'active']);
             InventoryMovement::create(['vehicle_id' => $vehicleId, 'inventory_item_id' => $itemId, 'movement_type' => 'stock_update', 'quantity' => abs($available - $previous), 'previous_available' => $previous, 'new_available' => $available, 'created_by' => $userId, 'comment' => 'Actualizacion manual de inventario', 'created_at' => now()]);
-            broadcast(new InventoryUpdated($row->vehicle))->toOthers();
+            try { broadcast(new InventoryUpdated($row->vehicle))->toOthers(); } catch (\Throwable $e) { /* WebSocket no disponible */ }
             return $row->fresh();
         });
     }
@@ -77,6 +77,6 @@ class InventoryService
     private function movement(VehicleInventory $row, string $type, int $quantity, int $previous, int $new, ?int $requestId, string $comment): void
     {
         InventoryMovement::create(['vehicle_id' => $row->vehicle_id, 'inventory_item_id' => $row->inventory_item_id, 'request_id' => $requestId, 'movement_type' => $type, 'quantity' => $quantity, 'previous_available' => $previous, 'new_available' => $new, 'created_by' => auth()->id(), 'comment' => $comment, 'created_at' => now()]);
-        broadcast(new InventoryUpdated($row->vehicle))->toOthers();
+        try { broadcast(new InventoryUpdated($row->vehicle))->toOthers(); } catch (\Throwable $e) { /* WebSocket no disponible */ }
     }
 }
