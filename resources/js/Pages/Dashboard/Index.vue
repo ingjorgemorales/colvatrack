@@ -1,5 +1,5 @@
 <script setup>
-import { Head } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { Bell, Car, CheckCircle, ClipboardList, MapPin, MessageCircle, PackageCheck, Users } from '@lucide/vue';
 const props = defineProps({ stats: Array, recentRequests: Array, role: String, notifications: Array });
@@ -9,9 +9,9 @@ const icons = { Bell, Car, CheckCircle, ClipboardList, MapPin, MessageCircle, Pa
   <Head title="Dashboard" />
   <AppLayout title="Dashboard">
     <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-      <article v-for="card in stats" :key="card.label" class="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
+      <Link v-for="card in stats" :key="card.label" :href="card.route || '#'" class="rounded-md border border-slate-200 bg-white p-5 shadow-sm transition-colors hover:bg-[#edf3fa] cursor-pointer">
         <div class="flex items-center justify-between"><div><p class="text-sm font-medium text-slate-500">{{ card.label }}</p><p class="mt-2 text-3xl font-semibold text-slate-950">{{ card.value }}</p></div><span class="grid h-11 w-11 place-items-center rounded-md bg-[#e6eef7] text-[#123f6e]"><component :is="icons[card.icon] ?? ClipboardList" class="h-6 w-6" /></span></div>
-      </article>
+      </Link>
     </section>
     <section class="mt-6 grid gap-6 xl:grid-cols-[1.2fr_.8fr]">
       <div class="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
