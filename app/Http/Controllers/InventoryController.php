@@ -31,7 +31,7 @@ class InventoryController extends Controller
             'vehicles' => $vehicles,
             'filters' => ['search' => $search, 'per_page' => $perPage],
             'categories' => InventoryCategory::orderBy('name')->get(),
-            'items' => InventoryItem::with('category')->where('status', 'active')->orderBy('name')->get(),
+            'items' => InventoryItem::with('category')->withSum('vehicleInventories', 'quantity_total')->where('status', 'active')->orderBy('name')->get(),
             'movements' => InventoryMovement::with(['vehicle','item'])->latest('created_at')->limit(25)->get(),
             'canManageCatalog' => $user->hasRole('Administrador'),
         ]);
