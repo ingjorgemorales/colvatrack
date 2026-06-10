@@ -44,8 +44,8 @@ function shortJson(value) {
 
       <section class="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
         <div class="mb-4 flex items-center justify-between gap-3"><h2 class="flex items-center gap-2 text-lg font-semibold text-[#123f6e]"><ShieldCheck class="h-5 w-5" /> Registro de acciones</h2><span class="text-sm text-slate-500">{{ logs.total }} eventos</span></div>
-        <div class="overflow-x-auto">
-          <table class="w-full min-w-[1040px] text-left text-sm">
+        <div class="hidden sm:block">
+          <table class="w-full text-left text-sm">
             <thead class="bg-slate-50 text-slate-500"><tr><th class="px-3 py-2">Fecha</th><th>Usuario</th><th>Accion</th><th>Modulo</th><th>Descripcion</th><th>IP</th><th>Datos</th></tr></thead>
             <tbody>
               <tr v-for="log in logs.data" :key="log.id" class="border-t border-slate-100 align-top">
@@ -61,6 +61,7 @@ function shortJson(value) {
             </tbody>
           </table>
         </div>
+        <div class="space-y-2 sm:hidden"><div v-for="log in logs.data" :key="log.id" class="rounded border border-slate-100 bg-slate-50 p-3 text-sm"><div class="mb-1 flex items-start justify-between gap-2"><div><div class="font-medium text-slate-900">{{ log.user?.name ?? 'Sistema' }} {{ log.user?.last_name ?? '' }}</div><div class="text-xs text-slate-500">{{ log.user?.email }}</div></div><span class="shrink-0 rounded bg-[#e6eef7] px-2 py-1 text-xs font-semibold text-[#123f6e]">{{ log.action }}</span></div><div class="text-xs text-slate-500 mb-1">{{ log.created_at }}</div><div class="grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-slate-600"><div><span class="font-medium text-slate-700">Modulo:</span> {{ log.module }}</div><div><span class="font-medium text-slate-700">IP:</span> {{ log.ip_address }}</div></div><p class="mt-1 text-xs text-slate-600">{{ log.description }}</p><p v-if="log.new_values" class="mt-1 text-xs text-slate-400">{{ shortJson(log.new_values) }}</p></div><p v-if="!logs.data.length" class="py-4 text-center text-sm text-slate-500">No hay registros con esos filtros.</p></div>
         <div class="mt-4 flex items-center justify-between text-sm">
           <Link v-if="logs.prev_page_url" :href="logs.prev_page_url" class="rounded-md border border-slate-300 px-3 py-2 font-semibold text-slate-700">Anterior</Link><span v-else></span>
           <span class="text-slate-500">Pagina {{ logs.current_page }} de {{ logs.last_page }}</span>
