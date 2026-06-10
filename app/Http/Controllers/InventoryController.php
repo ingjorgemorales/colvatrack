@@ -75,16 +75,18 @@ class InventoryController extends Controller
 
     public function updateStock(Request $request, InventoryService $service)
     {
+        abort_unless($request->user()->hasRole('Administrador'), 403);
         $data = $request->validate([
             'vehicle_id' => ['required', 'exists:vehicles,id'],
             'inventory_item_id' => ['required', 'exists:inventory_items,id'],
             'quantity_total' => ['required', 'integer', 'min:0'],
-            'quantity_available' => ['required', 'integer', 'min:0'],
+            'quantity_available' => ['nullable', 'integer', 'min:0'],
         ]);
-        $vehicle = Vehicle::findOrFail($data['vehicle_id']);
-        abort_unless($request->user()->hasRole('Administrador') || $vehicle->driver_id === $request->user()->id, 403);
-        abort_if($data['quantity_available'] > $data['quantity_total'], 422, 'La cantidad disponible no puede superar la total.');
-        $service->setStock($vehicle->id, $data['inventory_item_id'], $data['quantity_total'], $data['quantity_available'], $request->user()->id);
+        if (! isset($data['quantity_available'])) {
+            $data['quantity_available'] = $data['quantity_total'];
+        }
+        abort_if((int) $data['quantity_available'] > (int) $data['quantity_total'], 422, 'La cantidad disponible no puede superar la total.');
+        $service->setStock($data['vehicle_id'], $data['inventory_item_id'], (int) $data['quantity_total'], (int) $data['quantity_available'], $request->user()->id);
         return back()->with('success', 'Inventario actualizado.');
     }
 }
