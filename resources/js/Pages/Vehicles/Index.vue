@@ -1,7 +1,7 @@
 <script setup>
 import { Head, Link, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
-import { MapPinned, Pencil, Plus, Search, Trash2 } from '@lucide/vue';
+import { MapPinned, Pencil, Plus, Search, Trash2, X } from '@lucide/vue';
 import { ref } from 'vue';
 
 const props = defineProps({ vehicles: Object, filters: Object });
@@ -9,6 +9,7 @@ const search = ref(props.filters?.search ?? '');
 const status = ref(props.filters?.status ?? '');
 const perPage = ref(props.filters?.per_page ?? 25);
 const apply = () => router.get('/vehiculos', { search: search.value, status: status.value, per_page: perPage.value }, { preserveState: true, replace: true });
+const clearFilters = () => { search.value = ''; status.value = ''; perPage.value = 25; router.get('/vehiculos', {}, { preserveState: true, replace: true }); };
 const deactivate = (vehicle) => { if (confirm(`Desactivar vehiculo ${vehicle.plate}?`)) router.delete(`/vehiculos/${vehicle.id}`); };
 </script>
 
@@ -21,6 +22,7 @@ const deactivate = (vehicle) => { if (confirm(`Desactivar vehiculo ${vehicle.pla
         <select v-model="status" class="rounded-md border border-slate-300 px-3 py-3"><option value="">Todos los estados</option><option value="active">Activo</option><option value="maintenance">Mantenimiento</option><option value="inactive">Inactivo</option></select>
         <select v-model="perPage" @change="apply" class="rounded-md border border-slate-300 px-3 py-3"><option value="25">25 por pagina</option><option value="50">50 por pagina</option><option value="100">100 por pagina</option></select>
         <button @click="apply" class="rounded-md border border-[#123f6e] px-4 py-3 font-semibold text-[#123f6e]">Filtrar</button>
+        <button @click="clearFilters" class="inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 px-4 py-3 font-semibold text-slate-700"><X class="h-4 w-4" /> Limpiar</button>
         <Link href="/vehiculos/create" class="inline-flex items-center justify-center gap-2 rounded-md bg-[#123f6e] px-4 py-3 font-semibold text-white"><Plus class="h-5 w-5" /> Nuevo</Link>
       </div>
 
