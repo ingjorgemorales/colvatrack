@@ -67,7 +67,7 @@ function submit() {
 <template>
   <Head :title="isEdit ? 'Editar proveedor GPS' : 'Nuevo proveedor GPS'" />
   <AppLayout :title="isEdit ? 'Editar proveedor GPS' : 'Nuevo proveedor GPS'">
-    <section class="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
+    <section class="rounded-md border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
       <Link href="/configuracion/gps" class="mb-5 inline-flex items-center gap-2 text-sm font-semibold text-[#123f6e]"><ArrowLeft class="h-4 w-4" /> Volver</Link>
       <form class="grid gap-5" @submit.prevent="submit">
         <div class="grid gap-4 md:grid-cols-2">
@@ -108,8 +108,8 @@ function submit() {
           </div>
         </div>
 
-        <div v-if="Object.keys(form.errors).length" class="rounded-md bg-red-50 p-3 text-sm text-red-700"><p v-for="error in form.errors" :key="error">{{ error }}</p></div>
-        <div><button class="inline-flex cursor-pointer items-center gap-2 rounded-md bg-[#123f6e] px-5 py-3 font-semibold text-white transition-colors hover:bg-[#0e2d52]"><Save class="h-5 w-5" /> Guardar proveedor</button></div>
+          <div v-if="Object.keys(form.errors).length" class="rounded-md bg-red-50 p-3 text-sm text-red-700"><p v-for="error in form.errors" :key="error">{{ error }}</p></div>
+        <div><button class="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-md bg-[#123f6e] px-5 py-3 font-semibold text-white transition-colors hover:bg-[#0e2d52] sm:w-auto"><Save class="h-5 w-5" /> Guardar proveedor</button></div>
       </form>
     </section>
   </AppLayout>

@@ -22,13 +22,13 @@ const statusClass = (status) => status === 'success' ? 'text-emerald-700' : stat
 <template>
   <Head title="Proveedores GPS" />
   <AppLayout title="Configuracion GPS y alertas">
-    <section class="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
+    <section class="rounded-md border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
       <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 class="text-lg font-bold text-slate-950">Proveedor activo, consumo API y reglas operativas</h2>
           <p class="mt-1 text-sm text-slate-600">El scheduler puede revisar cada segundo, pero el proveedor define cada cuantos segundos se consulta realmente la API.</p>
         </div>
-        <Link href="/configuracion/gps/create" class="inline-flex items-center justify-center gap-2 rounded-md bg-[#123f6e] px-4 py-3 font-semibold text-white"><Plus class="h-5 w-5" /> Nuevo proveedor</Link>
+        <Link href="/configuracion/gps/create" class="inline-flex w-full items-center justify-center gap-2 rounded-md bg-[#123f6e] px-4 py-3 font-semibold text-white sm:w-auto"><Plus class="h-5 w-5" /> Nuevo proveedor</Link>
       </div>
 
       <div class="grid gap-4 xl:grid-cols-2">
@@ -46,7 +46,7 @@ const statusClass = (status) => status === 'success' ? 'text-emerald-700' : stat
             <div><dt class="text-slate-500">Vehiculos asociados</dt><dd class="font-medium">{{ p.vehicles_count }}</dd></div>
             <div><dt class="text-slate-500">Intervalo real</dt><dd class="font-semibold text-[#123f6e]">{{ p.request_interval_seconds }}s</dd></div>
             <div><dt class="text-slate-500">Peticiones/dia estimadas</dt><dd class="font-semibold" :class="safeLimitClass(p)">{{ p.daily_estimate }} / {{ p.daily_limit }}</dd></div>
-            <div><dt class="text-slate-500">Peticiones hoy</dt><dd class="font-medium">{{ p.today_requests }} total, {{ p.today_success_requests }} ok, {{ p.today_error_requests }} error</dd></div>
+            <div><dt class="text-slate-500">Peticiones hoy</dt><dd class="font-medium"><span class="whitespace-nowrap">{{ p.today_requests }} total</span>, <span class="whitespace-nowrap">{{ p.today_success_requests }} ok</span>, <span class="whitespace-nowrap">{{ p.today_error_requests }} error</span></dd></div>
             <div><dt class="text-slate-500">Intervalo minimo recomendado</dt><dd class="font-medium">{{ p.recommended_interval_seconds }}s</dd></div>
             <div><dt class="text-slate-500">Ultimo exito</dt><dd>{{ p.last_success_at ?? '-' }}</dd></div>
             <div><dt class="text-slate-500">Ultimo error</dt><dd>{{ p.last_error_at ?? '-' }}</dd></div>
@@ -80,13 +80,13 @@ const statusClass = (status) => status === 'success' ? 'text-emerald-700' : stat
             <span>Este intervalo puede superar el limite diario. Sube el intervalo al menos a {{ p.recommended_interval_seconds }}s.</span>
           </div>
 
-          <form class="mt-4 flex gap-2" @submit.prevent="test(p)">
-            <input v-model="testForms[p.id].moviles" class="min-w-0 flex-1 rounded-md border border-slate-300 px-3 py-2" placeholder="WPQ084,ZGA89H" />
-            <button class="inline-flex cursor-pointer items-center gap-2 rounded-md border border-[#123f6e] px-3 py-2 font-semibold text-[#123f6e] transition-colors hover:bg-[#edf3fa]"><PlugZap class="h-4 w-4" /> Probar</button>
+          <form class="mt-4 flex flex-col gap-2 sm:flex-row" @submit.prevent="test(p)">
+            <input v-model="testForms[p.id].moviles" class="w-full rounded-md border border-slate-300 px-3 py-2 sm:min-w-0 sm:flex-1" placeholder="WPQ084,ZGA89H" />
+            <button class="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-[#123f6e] px-3 py-2 font-semibold text-[#123f6e] transition-colors hover:bg-[#edf3fa] sm:w-auto"><PlugZap class="h-4 w-4" /> Probar</button>
           </form>
 
           <div class="mt-4 flex gap-2">
-            <Link :href="`/configuracion/gps/${p.id}/edit`" class="inline-flex rounded-md border border-slate-200 p-2 text-[#123f6e]"><Pencil class="h-4 w-4" /></Link>
+            <Link :href="`/configuracion/gps/${p.id}/edit`" class="inline-flex rounded-md border border-slate-200 p-2 text-[#123f6e] transition-colors hover:bg-[#edf3fa]"><Pencil class="h-4 w-4" /></Link>
             <button @click="deactivate(p)" class="inline-flex cursor-pointer rounded-md border border-red-200 p-2 text-red-700 transition-colors hover:bg-red-50"><Trash2 class="h-4 w-4" /></button>
           </div>
         </article>
