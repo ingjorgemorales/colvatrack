@@ -3,6 +3,7 @@ namespace App\Http\Controllers;
 
 use App\Models\GpsProvider;
 use App\Models\GpsRequestLog;
+use App\Models\Vehicle;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Inertia\Inertia;
@@ -148,15 +149,25 @@ class GpsProviderController extends Controller
         }
 
         $created = 0;
-        foreach ($plates as $plate) {
+        $plateList = $plates->values()->all();
+
+        foreach ($plateList as $plate) {
             Vehicle::firstOrCreate(
                 ['plate' => $plate],
                 ['plate' => $plate, 'external_gps_id' => $plate, 'gps_provider_id' => $provider->id, 'status' => 'active']
             )->wasRecentlyCreated && $created++;
         }
 
-        if ($created > 0) {
-            session()->flash('success', session('success', '') . " {$created} vehiculos creados automaticamente desde la lista de moviles.");
+        $deactivated = Vehicle::where('gps_provider_id', $provider->id)
+            ->whereNotIn('plate', $plateList)
+            ->where('status', 'active')
+            ->update(['status' => 'inactive']);
+
+        $msgs = [];
+        if ($created > 0) $msgs[] = "{$created} vehiculos creados";
+        if ($deactivated > 0) $msgs[] = "{$deactivated} vehiculos desactivados";
+        if ($msgs) {
+            session()->flash('success', trim((session('success') ?? '') . ' ' . implode(', ', $msgs) . '.'));
         }
     }
 
