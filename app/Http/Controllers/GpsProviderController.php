@@ -44,7 +44,8 @@ class GpsProviderController extends Controller
 
     public function store(Request $request)
     {
-        GpsProvider::create($this->validated($request));
+        $provider = GpsProvider::create($this->validated($request));
+        $this->syncVehiclesFromMoviles($provider);
         return redirect()->route('gps-providers.index')->with('success', 'Proveedor GPS creado.');
     }
 
@@ -56,6 +57,7 @@ class GpsProviderController extends Controller
     public function update(Request $request, GpsProvider $gpsProvider)
     {
         $gpsProvider->update($this->validated($request, $gpsProvider));
+        $this->syncVehiclesFromMoviles($gpsProvider);
         return redirect()->route('gps-providers.index')->with('success', 'Proveedor GPS actualizado.');
     }
 
@@ -132,6 +134,30 @@ class GpsProviderController extends Controller
                 'repeat_minutes' => 60,
             ],
         ];
+    }
+
+    private function syncVehiclesFromMoviles(GpsProvider $provider): void
+    {
+        $moviles = data_get($provider->config_json, 'moviles', '');
+        if (is_string($moviles) && trim($moviles) !== '') {
+            $plates = collect(explode(',', $moviles))->map(fn ($v) => trim($v))->filter()->unique();
+        } elseif (is_array($moviles)) {
+            $plates = collect($moviles)->map(fn ($v) => trim((string) $v))->filter()->unique();
+        } else {
+            return;
+        }
+
+        $created = 0;
+        foreach ($plates as $plate) {
+            Vehicle::firstOrCreate(
+                ['plate' => $plate],
+                ['plate' => $plate, 'external_gps_id' => $plate, 'gps_provider_id' => $provider->id, 'status' => 'active']
+            )->wasRecentlyCreated && $created++;
+        }
+
+        if ($created > 0) {
+            session()->flash('success', session('success', '') . " {$created} vehiculos creados automaticamente desde la lista de moviles.");
+        }
     }
 
     private function alertConfig(GpsProvider $provider): array
