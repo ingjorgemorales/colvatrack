@@ -1,7 +1,7 @@
 <script setup>
 import { Head, Link, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
-import { MapPinned, Pencil, Plus, Search, Trash2, X } from '@lucide/vue';
+import { MapPinned, Pencil, Search, Trash2, X } from '@lucide/vue';
 import { ref } from 'vue';
 
 const props = defineProps({ vehicles: Object, filters: Object });
@@ -23,7 +23,6 @@ const deactivate = (vehicle) => { if (confirm(`Desactivar vehiculo ${vehicle.pla
         <select v-model="perPage" @change="apply" class="w-full rounded-md border border-slate-300 px-3 py-3 sm:w-auto"><option value="10">10 por pagina</option><option value="25">25 por pagina</option><option value="50">50 por pagina</option><option value="100">100 por pagina</option></select>
         <button @click="apply" class="w-full cursor-pointer rounded-md bg-[#123f6e] px-4 py-3 font-semibold text-white transition-colors hover:bg-[#0e2d52] sm:w-auto">Filtrar</button>
         <button @click="clearFilters" class="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-[#123f6e] px-4 py-3 font-semibold text-[#123f6e] transition-colors hover:bg-[#123f6e] hover:text-white sm:w-auto"><X class="h-4 w-4" /> Limpiar</button>
-        <Link href="/vehiculos/create" class="inline-flex w-full items-center justify-center gap-2 rounded-md bg-[#123f6e] px-4 py-3 font-semibold text-white sm:w-auto"><Plus class="h-5 w-5" /> Nuevo</Link>
       </div>
 
       <div class="mb-4 flex flex-wrap items-center justify-between gap-3 text-sm text-slate-600">
