@@ -14,7 +14,7 @@ class VehicleMovementService
             return $vehicles;
         }
 
-        $freshAfter = now()->subMinutes((int) env('LOCATION_MAX_AGE_MINUTES', 10));
+        $freshAfter = now()->subMinutes((int) env('GPS_MAX_AGE_MINUTES', 5));
         $threshold = (float) env('GPS_MOVEMENT_DISTANCE_THRESHOLD_METERS', 25);
         $ranked = DB::table('vehicle_locations')
             ->select(['id', 'vehicle_id', 'latitude', 'longitude', 'speed', 'gps_datetime', 'created_at'])
