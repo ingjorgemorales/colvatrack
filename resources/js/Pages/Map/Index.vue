@@ -116,6 +116,7 @@ function technicianIcon(t) {
     popupAnchor: [0, -38],
     html: `
       <div class="technician-marker ${fresh ? 'is-fresh' : 'is-stale'}">
+        ${fresh ? '<div class="technician-marker__halo"></div>' : ''}
         <div class="technician-marker__pin"><span>${escapeHtml(initials)}</span></div>
         <div class="technician-marker__label">${escapeHtml(t.name ?? 'Tecnico')}</div>
       </div>
@@ -157,7 +158,7 @@ function technicianPopup(t) {
   return `
     <div class="vehicle-popup">
       <div class="vehicle-popup__title">${escapeHtml(t.name)} ${escapeHtml(t.last_name ?? '')}</div>
-      <div class="vehicle-popup__status ${t.location_is_fresh ? 'is-moving' : 'is-stopped'}">${freshness}</div>
+      <div class="vehicle-popup__status ${t.location_is_fresh ? 'is-fresh' : 'is-stale'}">${freshness}</div>
       <dl>
         <div><dt>Rol</dt><dd>${escapeHtml(t.role ?? 'Tecnico')}</dd></div>
         <div><dt>Telefono</dt><dd>${escapeHtml(t.phone ?? '-')}</dd></div>

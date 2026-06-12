@@ -134,13 +134,19 @@ button, input, select, textarea { font: inherit; }
     white-space: nowrap;
     box-shadow: 0 5px 14px rgba(15, 23, 42, 0.18);
 }
-.technician-marker.is-stale .technician-marker__pin { background: #64748b; }
-.technician-marker.is-fresh .technician-marker__pin { background: #123f6e; }
+.technician-marker.is-stale .technician-marker__pin { background: #64748b; border-color: #94a3b8; }
+.technician-marker.is-stale .technician-marker__label { color: #64748b; }
+.technician-marker.is-fresh .technician-marker__pin { background: #123f6e; border-color: #22c55e; }
+.technician-marker.is-fresh .technician-marker__label { color: #15803d; }
+.technician-marker.is-fresh .technician-marker__halo { position: absolute; left: 5px; top: -7px; width: 52px; height: 52px; border-radius: 50%; background: rgba(34, 197, 94, 0.25); animation: tech-pulse 2s ease-in-out infinite; pointer-events: none; }
+@keyframes tech-pulse { 0%, 100% { transform: scale(0.9); opacity: 0.6; } 50% { transform: scale(1.15); opacity: 0.9; } }
 .vehicle-popup { min-width: 260px; color: #243044; }
 .vehicle-popup__title { color: #123f6e; font-size: 18px; font-weight: 800; }
 .vehicle-popup__status { display: inline-block; margin: 6px 0 10px; border-radius: 4px; padding: 4px 8px; color: #ffffff; font-size: 12px; font-weight: 800; }
 .vehicle-popup__status.is-moving { background: #15803d; }
 .vehicle-popup__status.is-stopped { background: #334155; }
+.vehicle-popup__status.is-fresh { background: #16a34a; }
+.vehicle-popup__status.is-stale { background: #64748b; }
 .vehicle-popup dl { display: grid; gap: 7px; margin: 0 0 10px; }
 .vehicle-popup dl > div { display: grid; grid-template-columns: 112px 1fr; gap: 8px; }
 .vehicle-popup dt { color: #64748b; font-weight: 700; }
