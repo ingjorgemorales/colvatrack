@@ -1,11 +1,13 @@
 <?php
 namespace App\Http\Controllers;
 
+use App\Mail\WelcomeMail;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\Vehicle;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
@@ -44,10 +46,11 @@ class UserController extends Controller
             'status' => ['required', 'in:active,inactive'], 'password' => ['required', 'confirmed', Password::min(8)->mixedCase()->numbers()->symbols()],
             'must_change_password' => ['boolean'], 'vehicle_id' => ['nullable', 'exists:vehicles,id'],
         ]);
-        $vehicleId = $data['vehicle_id'] ?? null; unset($data['vehicle_id'], $data['password_confirmation']);
-        $data['password'] = Hash::make($data['password']); $data['must_change_password'] = (bool) ($data['must_change_password'] ?? true);
+        $vehicleId = $data['vehicle_id'] ?? null; $plainPassword = $data['password']; unset($data['vehicle_id'], $data['password_confirmation']);
+        $data['password'] = Hash::make($plainPassword); $data['must_change_password'] = (bool) ($data['must_change_password'] ?? true);
         $user = User::create($data);
         if ($vehicleId) { Vehicle::where('driver_id', $user->id)->update(['driver_id' => null]); Vehicle::whereKey($vehicleId)->update(['driver_id' => $user->id]); }
+        try { Mail::to($user->email)->send(new WelcomeMail($user->name, $user->email, $plainPassword)); } catch (\Throwable $e) { \Illuminate\Support\Facades\Log::warning('No fue posible enviar correo de bienvenida', ['to' => $user->email, 'error' => $e->getMessage()]); }
         return redirect()->route('usuarios.index')->with('success', 'Usuario creado.');
     }
 

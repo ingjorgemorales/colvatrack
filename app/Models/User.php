@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Notifications\ColvatrackResetPassword;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -64,5 +65,10 @@ class User extends Authenticatable
             ->where('module', $module)
             ->where('action', $action)
             ->exists();
+    }
+
+    public function sendPasswordResetNotification(#[\SensitiveParameter] $token): void
+    {
+        $this->notify(new ColvatrackResetPassword($token));
     }
 }
