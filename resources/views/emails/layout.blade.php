@@ -5,7 +5,7 @@
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f3f5f8;padding:24px 0">
 <tr><td align="center">
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08)">
-<tr><td style="padding:32px 40px 24px;text-align:center;background-color:#123f6e">
+<tr><td style="padding:32px 40px 24px;text-align:center;background-color:#ffffff">
 <img src="{{ url('images/logo-login.png') }}" alt="Colvatel" style="max-height:60px;width:auto" />
 </td></tr>
 <tr><td style="padding:32px 40px;color:#243044;font-size:15px;line-height:1.6">
