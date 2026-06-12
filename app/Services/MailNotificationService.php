@@ -10,7 +10,8 @@ class MailNotificationService
     {
         if (!$to) { return; }
         try {
-            Mail::raw($body, fn ($message) => $message->to($to)->subject($subject));
+            $html = view('emails.notification', ['body' => $body])->render();
+            Mail::send([], [], fn ($message) => $message->to($to)->subject($subject)->setBody($html, 'text/html'));
         } catch (\Throwable $e) {
             Log::warning('No fue posible enviar correo ColvaTrack', ['to' => $to, 'subject' => $subject, 'error' => $e->getMessage()]);
         }
