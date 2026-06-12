@@ -27,7 +27,7 @@ class VehicleMovementService
             ->get()
             ->groupBy('vehicle_id');
 
-        return $vehicles->map(function ($vehicle) use ($latest, $threshold) {
+        return $vehicles->map(function ($vehicle) use ($latest, $threshold, $freshAfter) {
             $points = $latest->get($vehicle->id, collect())->sortBy('rn')->values();
             $current = $points->get(0);
             $previous = $points->get(1);
