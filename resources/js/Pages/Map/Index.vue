@@ -33,7 +33,7 @@ const radiusTechnicians = computed(() => {
 });
 const filtered = computed(() => vehicles.value
   .filter(v => `${v.plate} ${v.driver?.name ?? ''} ${v.driver?.last_name ?? ''}`.toLowerCase().includes(query.value.toLowerCase()))
-  .filter(v => status.value === 'todos' || (status.value === 'movimiento' ? Boolean(v.is_moving) : !Boolean(v.is_moving)))
+  .filter(v => status.value === 'todos' || (status.value === 'movimiento' ? Boolean(v.gps_is_fresh) : !Boolean(v.gps_is_fresh)))
   .filter(v => availability.value === 'todos' || (availability.value === 'disponibles' ? (v.inventory ?? []).some(i => Number(i.quantity_available) > 0) : true))
   .filter(v => {
     if (!radiusMeters.value) return true;
@@ -41,8 +41,8 @@ const filtered = computed(() => vehicles.value
     return radiusTechnicians.value.some(t => distanceBetween(t, v) <= radiusMeters.value);
   })
 );
-const movingCount = computed(() => filtered.value.filter(v => Boolean(v.is_moving)).length);
-const stoppedCount = computed(() => filtered.value.filter(v => !Boolean(v.is_moving)).length);
+const freshCount = computed(() => filtered.value.filter(v => Boolean(v.gps_is_fresh)).length);
+const staleCount = computed(() => filtered.value.filter(v => !Boolean(v.gps_is_fresh)).length);
 const technicianCount = computed(() => technicians.value.length);
 const lastRefreshLabel = computed(() => lastRefresh.value ? lastRefresh.value.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'Pendiente');
 const radiusLabel = computed(() => {
@@ -77,11 +77,12 @@ function nearestTechnicianDistance(vehicle) {
 }
 
 function vehicleIcon(v) {
+  const fresh = Boolean(v.gps_is_fresh);
   const moving = Boolean(v.is_moving);
   const heading = Number(v.current_heading || 0);
   const plate = escapeHtml(v.plate);
-  const stateClass = moving ? 'is-moving' : 'is-stopped';
-  const title = moving ? 'Cambio posicion GPS' : 'Sin cambio de posicion';
+  const stateClass = fresh ? 'is-fresh' : 'is-stale';
+  const title = fresh ? 'Datos GPS recientes' : 'GPS sin datos recientes';
 
   return L.divIcon({
     className: '',
@@ -126,14 +127,14 @@ function technicianIcon(t) {
 
 function vehiclePopup(v) {
   const inv = (v.inventory ?? []).slice(0, 5).map(i => `<li>${escapeHtml(i.item?.name ?? 'Item')}: ${escapeHtml(i.quantity_available)} disp.</li>`).join('');
-  const moving = Boolean(v.is_moving);
-  const state = moving ? 'Cambio de posicion GPS' : 'Sin cambio de posicion';
+  const fresh = Boolean(v.gps_is_fresh);
+  const state = fresh ? 'GPS con datos recientes' : 'GPS sin datos recientes';
   const nearestDistance = nearestTechnicianDistance(v);
   const techDistance = nearestDistance === null ? '-' : `${Math.round(nearestDistance)} m`;
   return `
     <div class="vehicle-popup">
       <div class="vehicle-popup__title">${escapeHtml(v.plate)}</div>
-      <div class="vehicle-popup__status ${moving ? 'is-moving' : 'is-stopped'}">${state}</div>
+      <div class="vehicle-popup__status ${fresh ? 'is-fresh' : 'is-stale'}">${state}</div>
       <dl>
         <div><dt>Conductor</dt><dd>${escapeHtml(v.driver?.name ?? 'Sin asignar')}</dd></div>
         <div><dt>Telefono</dt><dd>${escapeHtml(v.driver?.phone ?? '-')}</dd></div>
@@ -262,7 +263,7 @@ watch([query, status, availability, selectedTechnicianId, distance], () => rende
   <AppLayout title="Mapa">
     <section class="mb-6 grid gap-4 xl:grid-cols-5">
       <input v-model="query" class="rounded-md border border-slate-200 bg-[#e9eef8] px-5 py-4 outline-none focus:border-[#123f6e]" placeholder="Buscar placa o conductor" />
-      <select v-model="status" class="rounded-md border border-slate-200 bg-[#e9eef8] px-5 py-4 outline-none focus:border-[#123f6e]"><option value="todos">Todos los estados</option><option value="movimiento">Vehiculos que cambiaron posicion</option><option value="detenido">Vehiculos sin cambio de posicion</option></select>
+      <select v-model="status" class="rounded-md border border-slate-200 bg-[#e9eef8] px-5 py-4 outline-none focus:border-[#123f6e]"><option value="todos">Todos los estados</option><option value="movimiento">GPS con datos recientes</option><option value="detenido">GPS sin datos recientes</option></select>
       <select v-model="availability" class="rounded-md border border-slate-200 bg-[#e9eef8] px-5 py-4 outline-none focus:border-[#123f6e]"><option value="todos">Todos</option><option value="disponibles">Con herramientas disponibles</option></select>
       <select v-model="selectedTechnicianId" class="rounded-md border border-slate-200 bg-[#e9eef8] px-5 py-4 outline-none focus:border-[#123f6e]"><option value="">Todos los tecnicos</option><option v-for="t in technicians" :key="t.id" :value="t.id">{{ t.name }} {{ t.last_name ?? '' }}</option></select>
       <input v-model="distance" type="number" min="1" class="rounded-md border border-slate-200 bg-[#e9eef8] px-5 py-4 outline-none focus:border-[#16a34a]" placeholder="Radio metros, ej. 500" />
@@ -271,8 +272,8 @@ watch([query, status, availability, selectedTechnicianId, distance], () => rende
     <section class="mb-4 flex flex-wrap items-center gap-3 text-sm text-slate-600">
       <span class="rounded bg-white px-3 py-2 shadow-sm">{{ filtered.length }} vehiculos visibles</span>
       <span class="rounded bg-white px-3 py-2 shadow-sm"><span class="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-[#123f6e]"></span>{{ technicianCount }} tecnicos ubicados</span>
-      <span class="rounded bg-white px-3 py-2 shadow-sm"><span class="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-emerald-500"></span>{{ movingCount }} cambiaron posicion</span>
-      <span class="rounded bg-white px-3 py-2 shadow-sm"><span class="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-slate-500"></span>{{ stoppedCount }} sin cambio</span>
+      <span class="rounded bg-white px-3 py-2 shadow-sm"><span class="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-emerald-500"></span>{{ freshCount }} GPS reciente</span>
+      <span class="rounded bg-white px-3 py-2 shadow-sm"><span class="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-slate-500"></span>{{ staleCount }} GPS vencido</span>
       <span class="rounded bg-white px-3 py-2 shadow-sm">{{ radiusLabel }}</span>
       <span class="rounded bg-white px-3 py-2 shadow-sm"><span class="mr-2 inline-block h-2.5 w-2.5 rounded-full" :class="refreshing ? 'bg-amber-500' : 'bg-emerald-500'"></span>Actualizado {{ lastRefreshLabel }}</span>
       <button @click="refreshVehicles" class="cursor-pointer rounded bg-white px-3 py-2 font-semibold text-[#123f6e] shadow-sm transition-colors hover:bg-[#edf3fa]">Actualizar ahora</button>

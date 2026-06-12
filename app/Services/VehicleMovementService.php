@@ -14,6 +14,7 @@ class VehicleMovementService
             return $vehicles;
         }
 
+        $freshAfter = now()->subMinutes((int) env('LOCATION_MAX_AGE_MINUTES', 10));
         $threshold = (float) env('GPS_MOVEMENT_DISTANCE_THRESHOLD_METERS', 25);
         $ranked = DB::table('vehicle_locations')
             ->select(['id', 'vehicle_id', 'latitude', 'longitude', 'speed', 'gps_datetime', 'created_at'])
@@ -39,6 +40,7 @@ class VehicleMovementService
             $vehicle->setAttribute('movement_basis', $current && $previous ? 'position_delta' : 'insufficient_history');
             $vehicle->setAttribute('previous_latitude', $previous?->latitude);
             $vehicle->setAttribute('previous_longitude', $previous?->longitude);
+            $vehicle->setAttribute('gps_is_fresh', $vehicle->last_gps_datetime && $vehicle->last_gps_datetime->greaterThan($freshAfter));
 
             return $vehicle;
         });
