@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Exports\ArrayReportExport;
 use App\Models\AuditLog;
 use App\Models\InventoryItem;
 use App\Models\InventoryMovement;
@@ -13,8 +12,6 @@ use App\Models\Vehicle;
 use App\Models\VehicleLocation;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Arr;
-use Maatwebsite\Excel\Facades\Excel;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class ReportService
 {
@@ -34,12 +31,25 @@ class ReportService
         ];
     }
 
-    public function download(string $type, array $filters = []): BinaryFileResponse
+    public function download(string $type, array $filters = [])
     {
         [$headings, $rows] = $this->build($type, $filters);
-        $file = 'colvatrack_'.$type.'_'.now()->format('Ymd_His').'.xlsx';
+        $filename = 'colvatrack_'.$type.'_'.now()->format('Ymd_His').'.csv';
 
-        return Excel::download(new ArrayReportExport($headings, $rows), $file);
+        $callback = function () use ($headings, $rows) {
+            $handle = fopen('php://output', 'w');
+            fwrite($handle, "\xEF\xBB\xBF");
+            fputcsv($handle, $headings);
+            foreach ($rows as $row) {
+                fputcsv($handle, $row);
+            }
+            fclose($handle);
+        };
+
+        return response()->stream($callback, 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+        ]);
     }
 
     public function build(string $type, array $filters = []): array
