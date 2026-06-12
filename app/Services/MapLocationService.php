@@ -37,11 +37,15 @@ class MapLocationService
             ->whereNotNull('current_longitude')
             ->whereHas('role', fn ($q) => $q->where('name', 'Tecnico'));
 
-        if ($viewer?->hasRole('Conductor')) {
-            $vehicleIds = Vehicle::where('driver_id', $viewer->id)->pluck('id');
-            $techIds = ToolRequest::whereIn('vehicle_id', $vehicleIds)->pluck('technician_id')->unique();
-            $query->whereIn('id', $techIds);
-        }
+    if ($viewer?->hasRole('Conductor')) {
+        $vehicleIds = Vehicle::where('driver_id', $viewer->id)->pluck('id');
+        $techIds = ToolRequest::whereIn('vehicle_id', $vehicleIds)->pluck('technician_id')->unique();
+        $query->whereIn('id', $techIds);
+    }
+
+    if ($viewer?->hasRole('Tecnico')) {
+        $query->whereKey($viewer->id);
+    }
 
         return $query->orderBy('name')
             ->get(['id', 'role_id', 'name', 'last_name', 'email', 'phone', 'current_latitude', 'current_longitude', 'location_updated_at'])
