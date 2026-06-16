@@ -43,10 +43,10 @@ class UserController extends Controller
         $data = $request->validate([
             'role_id' => ['required', 'exists:roles,id'], 'name' => ['required', 'string', 'max:120'], 'last_name' => ['nullable', 'string', 'max:120'],
             'email' => ['required', 'email', 'unique:users,email'], 'phone' => ['nullable', 'string', 'max:40'], 'cargo' => ['nullable', 'string', 'max:120'],
-            'status' => ['required', 'in:active,inactive'], 'password' => ['required', 'confirmed', Password::min(8)->mixedCase()->numbers()->symbols()],
+            'status' => ['required', 'in:active,inactive'],
             'must_change_password' => ['boolean'], 'vehicle_id' => ['nullable', 'exists:vehicles,id'],
         ]);
-        $vehicleId = $data['vehicle_id'] ?? null; $plainPassword = $data['password']; unset($data['vehicle_id'], $data['password_confirmation']);
+        $vehicleId = $data['vehicle_id'] ?? null; $plainPassword = substr(str_shuffle('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%&*'), 0, 12); unset($data['vehicle_id']);
         $data['password'] = Hash::make($plainPassword); $data['must_change_password'] = (bool) ($data['must_change_password'] ?? true);
         $user = User::create($data);
         if ($vehicleId) { Vehicle::where('driver_id', $user->id)->update(['driver_id' => null]); Vehicle::whereKey($vehicleId)->update(['driver_id' => $user->id]); }
