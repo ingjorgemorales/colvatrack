@@ -18,7 +18,8 @@ class VehicleMovementService
         $threshold = (float) env('GPS_MOVEMENT_DISTANCE_THRESHOLD_METERS', 25);
         $ranked = DB::table('vehicle_locations')
             ->select(['id', 'vehicle_id', 'latitude', 'longitude', 'speed', 'gps_datetime', 'created_at'])
-            ->selectRaw('ROW_NUMBER() OVER (PARTITION BY vehicle_id ORDER BY COALESCE(gps_datetime, created_at) DESC, id DESC) as rn')
+            ->whereNotNull('gps_datetime')
+            ->selectRaw('ROW_NUMBER() OVER (PARTITION BY vehicle_id ORDER BY gps_datetime DESC, id DESC) as rn')
             ->whereIn('vehicle_id', $ids);
 
         $latest = DB::query()
