@@ -16,20 +16,25 @@ class VehicleMovementService
 
         $freshAfter = now()->subMinutes((int) env('GPS_MAX_AGE_MINUTES', 5));
         $threshold = (float) env('GPS_MOVEMENT_DISTANCE_THRESHOLD_METERS', 25);
-        $ranked = DB::table('vehicle_locations')
-            ->select(['id', 'vehicle_id', 'latitude', 'longitude', 'speed', 'gps_datetime', 'created_at'])
-            ->whereNotNull('gps_datetime')
-            ->selectRaw('ROW_NUMBER() OVER (PARTITION BY vehicle_id ORDER BY gps_datetime DESC, id DESC) as rn')
-            ->whereIn('vehicle_id', $ids);
+        $latest = collect();
 
-        $latest = DB::query()
-            ->fromSub($ranked, 'ranked_locations')
-            ->where('rn', '<=', 2)
-            ->get()
-            ->groupBy('vehicle_id');
+        foreach ($ids as $vehicleId) {
+            $points = DB::table('vehicle_locations')
+                ->select(['id', 'vehicle_id', 'latitude', 'longitude', 'speed', 'gps_datetime', 'created_at'])
+                ->where('vehicle_id', $vehicleId)
+                ->whereNotNull('gps_datetime')
+                ->orderBy('gps_datetime', 'desc')
+                ->orderBy('id', 'desc')
+                ->limit(2)
+                ->get();
+
+            if ($points->isNotEmpty()) {
+                $latest->put($vehicleId, $points);
+            }
+        }
 
         return $vehicles->map(function ($vehicle) use ($latest, $threshold, $freshAfter) {
-            $points = $latest->get($vehicle->id, collect())->sortBy('rn')->values();
+            $points = $latest->get($vehicle->id, collect());
             $current = $points->get(0);
             $previous = $points->get(1);
             $distance = ($current && $previous) ? $this->distanceMeters($current, $previous) : 0.0;
