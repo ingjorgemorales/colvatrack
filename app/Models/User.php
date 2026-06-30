@@ -61,10 +61,10 @@ class User extends Authenticatable
             return true;
         }
 
-        return (bool) $this->role?->permissions()
+        return (bool) $this->role?->permissions
             ->where('module', $module)
             ->where('action', $action)
-            ->exists();
+            ->isNotEmpty();
     }
 
     public function sendPasswordResetNotification(#[\SensitiveParameter] $token): void
