@@ -60,59 +60,25 @@ class VehicleController extends Controller
 
     public function routeHistory(Request $request, Vehicle $vehiculo)
     {
-        $filters = [
-            'from' => $request->string('from')->toString(),
-            'to' => $request->string('to')->toString(),
-        ];
+        $from = $this->parseDateFilter($request->string('from')->toString()) ?? now()->subHours(24);
+        $to = $this->parseDateFilter($request->string('to')->toString()) ?? now();
 
-        $from = $this->parseDateFilter($filters['from']);
-        $to = $this->parseDateFilter($filters['to']);
-        $hasDateFilter = $from || $to;
-
-        $locationsQuery = $vehiculo->locations()
+        $locations = $vehiculo->locations()
             ->whereNotNull('latitude')
-            ->whereNotNull('longitude');
-
-        if ($from) {
-            $locationsQuery->where(function ($query) use ($from) {
-                $query->where('gps_datetime', '>=', $from)
-                    ->orWhere(function ($fallback) use ($from) {
-                        $fallback->whereNull('gps_datetime')->where('created_at', '>=', $from);
-                    });
-            });
-        }
-
-        if ($to) {
-            $locationsQuery->where(function ($query) use ($to) {
-                $query->where('gps_datetime', '<=', $to)
-                    ->orWhere(function ($fallback) use ($to) {
-                        $fallback->whereNull('gps_datetime')->where('created_at', '<=', $to);
-                    });
-            });
-        }
-
-        if ($hasDateFilter) {
-            $locations = $locationsQuery
-                ->orderByRaw('COALESCE(gps_datetime, created_at) asc')
-                ->orderBy('id')
-                ->get();
-        } else {
-            $locations = $locationsQuery
-                ->orderByRaw('COALESCE(gps_datetime, created_at) desc')
-                ->orderByDesc('id')
-                ->limit(300)
-                ->get()
-                ->reverse()
-                ->values();
-        }
+            ->whereNotNull('longitude')
+            ->where('gps_datetime', '>=', $from)
+            ->where('gps_datetime', '<=', $to)
+            ->orderBy('gps_datetime', 'asc')
+            ->orderBy('id', 'asc')
+            ->get();
 
         return Inertia::render('Vehicles/History', [
             'vehicle' => $vehiculo->load('driver', 'provider'),
             'locations' => $locations,
-            'filters' => $filters,
-            'hasDateFilter' => $hasDateFilter,
-            'maxPoints' => $hasDateFilter ? null : 300,
-            'usesFullRange' => $hasDateFilter,
+            'filters' => [
+                'from' => $from->format('Y-m-d\TH:i'),
+                'to' => $to->format('Y-m-d\TH:i'),
+            ],
         ]);
     }
 

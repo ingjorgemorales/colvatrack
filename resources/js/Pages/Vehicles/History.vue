@@ -9,9 +9,6 @@ const props = defineProps({
   vehicle: Object,
   locations: Array,
   filters: { type: Object, default: () => ({}) },
-  hasDateFilter: Boolean,
-  maxPoints: Number,
-  usesFullRange: Boolean,
 });
 
 const mapEl = ref(null);
@@ -37,8 +34,6 @@ const routeDistanceKm = computed(() => {
 });
 const hasRoute = computed(() => points.value.length >= 2);
 const rangeLabel = computed(() => {
-  if (!props.hasDateFilter) return `Ultimos ${props.maxPoints ?? 300} puntos registrados`;
-  if (props.usesFullRange) return 'Todos los puntos GPS del rango seleccionado';
   const from = filters.value.from || 'inicio';
   const to = filters.value.to || 'ahora';
   return `${from} hasta ${to}`;
