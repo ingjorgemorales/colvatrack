@@ -33,7 +33,6 @@ const iconColors = {
       </div>
       <div class="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
         <div class="mb-4 flex items-center justify-between"><h2 class="text-lg font-semibold text-[#123f6e]">Panel {{ role }}</h2><Bell class="h-5 w-5 text-slate-400" /></div>
-        <div class="space-y-3 text-sm text-slate-600"><p>Ubicacion obligatoria activa para tecnicos y conductores.</p><p>GPS: <code>php artisan gps:sync-last-positions</code>.</p><p>Correo SMTP configurado para recuperacion de contraseña y notificaciones.</p></div>
         <div class="mt-5 border-t border-slate-100 pt-4"><h3 class="mb-2 font-semibold text-slate-800">Notificaciones recientes</h3><p v-if="!notifications.length" class="text-sm text-slate-500">Sin notificaciones nuevas.</p><div v-for="n in notifications" :key="n.id" class="rounded bg-slate-50 px-3 py-2 text-sm"><strong>{{ n.title }}</strong><p class="text-slate-500">{{ n.message }}</p></div></div>
       </div>
     </section>
