@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Exports\ArrayReportExport;
 use App\Models\AuditLog;
 use App\Models\InventoryItem;
 use App\Models\InventoryMovement;
@@ -13,7 +12,9 @@ use App\Models\Vehicle;
 use App\Models\VehicleLocation;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Arr;
-use Maatwebsite\Excel\Facades\Excel;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class ReportService
 {
@@ -39,10 +40,14 @@ class ReportService
         [$headings, $rows] = $this->build($type, $filters);
         $filename = 'colvatrack_'.$type.'_'.now()->format('Ymd_His').'.xlsx';
 
-        return Excel::download(
-            new ArrayReportExport($headings, $rows, $this->reportName($type)),
-            $filename
-        );
+        return response()->streamDownload(function () use ($headings, $rows, $type) {
+            $spreadsheet = $this->spreadsheet($this->reportName($type), $headings, $rows);
+            $writer = new Xlsx($spreadsheet);
+            $writer->save('php://output');
+            $spreadsheet->disconnectWorksheets();
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
     }
 
     public function build(string $type, array $filters = []): array
@@ -315,5 +320,35 @@ class ReportService
     private function reportName(string $type): string
     {
         return collect($this->catalog())->firstWhere('key', $type)['name'] ?? 'Reporte';
+    }
+
+    private function spreadsheet(string $title, array $headings, array $rows): Spreadsheet
+    {
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle($this->sheetTitle($title));
+        $sheet->fromArray($headings, null, 'A1', true);
+        $sheet->fromArray($rows, null, 'A2', true);
+
+        $highestColumn = $sheet->getHighestColumn();
+        $highestRow = max(1, $sheet->getHighestRow());
+        $sheet->getStyle("A1:{$highestColumn}1")->getFont()->setBold(true);
+        $sheet->getStyle("A1:{$highestColumn}1")->getFill()
+            ->setFillType(Fill::FILL_SOLID)
+            ->getStartColor()
+            ->setARGB('FFE6EEF7');
+        $sheet->freezePane('A2');
+        $sheet->setAutoFilter("A1:{$highestColumn}{$highestRow}");
+
+        foreach (range('A', $highestColumn) as $column) {
+            $sheet->getColumnDimension($column)->setAutoSize(true);
+        }
+
+        return $spreadsheet;
+    }
+
+    private function sheetTitle(string $title): string
+    {
+        return mb_substr(preg_replace('/[\\\\\\/\\?\\*\\[\\]:]/', '', $title) ?: 'Reporte', 0, 31);
     }
 }
