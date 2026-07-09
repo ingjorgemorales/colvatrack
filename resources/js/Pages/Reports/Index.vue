@@ -2,7 +2,7 @@
 import { Head } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { Download, FileSpreadsheet, Filter } from '@lucide/vue';
-import { computed, reactive } from 'vue';
+import { computed, reactive, watch } from 'vue';
 
 const props = defineProps({ reports: Array, filters: Object, vehicles: Array, users: Array, categories: Array });
 const form = reactive({
@@ -16,12 +16,26 @@ const form = reactive({
 });
 
 const currentReport = computed(() => props.reports.find((report) => report.key === form.type) || props.reports[0]);
+const statusFilters = {
+  vehicles: { label: 'Estado', options: ['active', 'inactive', 'maintenance'] },
+  users: { label: 'Estado', options: ['active', 'inactive'] },
+  technicians: { label: 'Estado', options: ['active', 'inactive'] },
+  drivers: { label: 'Estado', options: ['active', 'inactive'] },
+  requests: { label: 'Estado', options: ['pendiente', 'aceptada', 'rechazada', 'en_camino', 'entregada', 'en_uso', 'para_recoger', 'recogida', 'finalizada', 'cancelada'] },
+  inventory: { label: 'Estado herramienta', options: ['active', 'inactive'] },
+  movements: { label: 'Tipo de movimiento', options: ['stock_update', 'reserved', 'released', 'delivered', 'returned'] },
+  audit: { label: 'Modulo', options: ['dashboard', 'mapa', 'solicitudes', 'chat', 'notificaciones', 'inventario', 'vehiculos', 'reportes', 'usuarios', 'roles', 'auditoria', 'perfil', 'configuracion_gps'] },
+  activity: { label: 'Estado nuevo', options: ['pendiente', 'aceptada', 'rechazada', 'en_camino', 'entregada', 'en_uso', 'para_recoger', 'recogida', 'finalizada', 'cancelada'] },
+};
+const statusFilter = computed(() => statusFilters[form.type] ?? null);
 const exportUrl = computed(() => {
   const params = new URLSearchParams();
   Object.entries(form).forEach(([key, value]) => { if (value) params.set(key, value); });
   return `/reportes/export?${params.toString()}`;
 });
-const statusOptions = ['active', 'inactive', 'pendiente', 'aceptada', 'rechazada', 'en_camino', 'entregada', 'en_uso', 'recogida', 'finalizada', 'cancelada', 'reserve', 'release', 'deliver', 'return', 'adjust'];
+watch(() => form.type, () => {
+  if (!statusFilter.value?.options.includes(form.status)) form.status = '';
+}, { immediate: true });
 </script>
 
 <template>
@@ -42,7 +56,7 @@ const statusOptions = ['active', 'inactive', 'pendiente', 'aceptada', 'rechazada
           <div><label class="block text-sm font-medium text-slate-700">Vehiculo</label><select v-model="form.vehicle_id" class="w-full rounded-md border border-slate-300 px-3 py-3"><option value="">Todos</option><option v-for="vehicle in vehicles" :key="vehicle.id" :value="vehicle.id">{{ vehicle.plate }}</option></select></div>
           <div><label class="block text-sm font-medium text-slate-700">Usuario</label><select v-model="form.user_id" class="w-full rounded-md border border-slate-300 px-3 py-3"><option value="">Todos</option><option v-for="user in users" :key="user.id" :value="user.id">{{ user.name }} {{ user.last_name }} - {{ user.role?.name }}</option></select></div>
           <div><label class="block text-sm font-medium text-slate-700">Categoria</label><select v-model="form.category_id" class="w-full rounded-md border border-slate-300 px-3 py-3"><option value="">Todas</option><option v-for="category in categories" :key="category.id" :value="category.id">{{ category.name }}</option></select></div>
-          <div><label class="block text-sm font-medium text-slate-700">Estado / tipo</label><select v-model="form.status" class="w-full rounded-md border border-slate-300 px-3 py-3"><option value="">Todos</option><option v-for="status in statusOptions" :key="status" :value="status">{{ status }}</option></select></div>
+          <div v-if="statusFilter"><label class="block text-sm font-medium text-slate-700">{{ statusFilter.label }}</label><select v-model="form.status" class="w-full rounded-md border border-slate-300 px-3 py-3"><option value="">Todos</option><option v-for="status in statusFilter.options" :key="status" :value="status">{{ status }}</option></select></div>
           <a :href="exportUrl" class="flex w-full items-center justify-center gap-2 rounded-md bg-[#123f6e] px-4 py-3 font-semibold text-white"><Download class="h-5 w-5" /> Exportar XLSX</a>
         </div>
       </aside>

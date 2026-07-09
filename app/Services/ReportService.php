@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exports\ArrayReportExport;
 use App\Models\AuditLog;
 use App\Models\InventoryItem;
 use App\Models\InventoryMovement;
@@ -12,6 +13,7 @@ use App\Models\Vehicle;
 use App\Models\VehicleLocation;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Arr;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ReportService
 {
@@ -33,23 +35,14 @@ class ReportService
 
     public function download(string $type, array $filters = [])
     {
+        $filters = $this->cleanFilters($filters);
         [$headings, $rows] = $this->build($type, $filters);
-        $filename = 'colvatrack_'.$type.'_'.now()->format('Ymd_His').'.csv';
+        $filename = 'colvatrack_'.$type.'_'.now()->format('Ymd_His').'.xlsx';
 
-        $callback = function () use ($headings, $rows) {
-            $handle = fopen('php://output', 'w');
-            fwrite($handle, "\xEF\xBB\xBF");
-            fputcsv($handle, $headings);
-            foreach ($rows as $row) {
-                fputcsv($handle, $row);
-            }
-            fclose($handle);
-        };
-
-        return response()->stream($callback, 200, [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
-        ]);
+        return Excel::download(
+            new ArrayReportExport($headings, $rows, $this->reportName($type)),
+            $filename
+        );
     }
 
     public function build(string $type, array $filters = []): array
@@ -75,6 +68,7 @@ class ReportService
             ->when($filters['vehicle_id'] ?? null, fn (Builder $q, $id) => $q->whereKey($id))
             ->when($filters['status'] ?? null, fn (Builder $q, $status) => $q->where('status', $status))
             ->orderBy('plate');
+        $this->dateRange($query, $filters, 'last_gps_datetime');
 
         $headings = ['Placa', 'Marca', 'Modelo', 'Ano', 'Color', 'Estado', 'Conductor', 'Proveedor GPS', 'Latitud', 'Longitud', 'Velocidad', 'Evento GPS', 'Ultima fecha GPS', 'Direccion'];
         $rows = $query->get()->map(fn (Vehicle $v) => [
@@ -309,5 +303,17 @@ class ReportService
     private function date(mixed $value): ?string
     {
         return $value ? $value->format('Y-m-d H:i:s') : null;
+    }
+
+    private function cleanFilters(array $filters): array
+    {
+        return collect($filters)
+            ->filter(fn ($value) => $value !== null && $value !== '')
+            ->all();
+    }
+
+    private function reportName(string $type): string
+    {
+        return collect($this->catalog())->firstWhere('key', $type)['name'] ?? 'Reporte';
     }
 }
