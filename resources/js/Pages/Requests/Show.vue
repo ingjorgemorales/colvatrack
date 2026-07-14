@@ -67,6 +67,8 @@ const timeline = computed(() => [
   ['finalized_at', 'Finalizada'],
 ].filter(([key]) => props.request[key]));
 const currentStatusClass = computed(() => statusClasses[props.request.status] ?? 'bg-slate-100 text-slate-700 border-slate-200');
+const hasVehicleRouteLocation = computed(() => Boolean(props.request.vehicle?.current_latitude && props.request.vehicle?.current_longitude));
+const vehicleRouteName = computed(() => props.request.vehicle?.plate ? `Vehiculo ${props.request.vehicle.plate}` : 'Vehiculo asignado');
 
 function statusLabel(status) { return labels[status] ?? status; }
 function actionLabel(status) { return actionLabels[status] ?? `Marcar ${statusLabel(status)}`; }
@@ -140,45 +142,31 @@ function openRouteMap() {
   routeInfo.value = null;
   locating.value = true;
   nextTick(() => {
-    if (!navigator.geolocation) { locating.value = false; return; }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        locating.value = false;
-        const driverLat = pos.coords.latitude;
-        const driverLng = pos.coords.longitude;
-        const techLat = Number(props.request.technician_latitude);
-        const techLng = Number(props.request.technician_longitude);
-        initMap(driverLat, driverLng, techLat, techLng);
-      },
-      () => {
-        locating.value = false;
-        const techLat = Number(props.request.technician_latitude);
-        const techLng = Number(props.request.technician_longitude);
-        const driverLat = Number(props.request.driver?.current_latitude);
-        const driverLng = Number(props.request.driver?.current_longitude);
-        if (driverLat && driverLng) initMap(driverLat, driverLng, techLat, techLng);
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
+    locating.value = false;
+    const vehicleLat = Number(props.request.vehicle?.current_latitude);
+    const vehicleLng = Number(props.request.vehicle?.current_longitude);
+    const techLat = Number(props.request.technician_latitude);
+    const techLng = Number(props.request.technician_longitude);
+    if (vehicleLat && vehicleLng && techLat && techLng) initMap(vehicleLat, vehicleLng, techLat, techLng);
   });
 }
-function initMap(driverLat, driverLng, techLat, techLng) {
+function initMap(vehicleLat, vehicleLng, techLat, techLng) {
   if (routeMap) routeMap.remove();
-  routeMap = L.map(mapEl.value, { zoomControl: true }).setView([driverLat, driverLng], 13);
+  routeMap = L.map(mapEl.value, { zoomControl: true }).setView([vehicleLat, vehicleLng], 13);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: 'Leaflet | OpenStreetMap' }).addTo(routeMap);
-  L.marker([driverLat, driverLng], {
+  L.marker([vehicleLat, vehicleLng], {
     icon: L.divIcon({
       className: '', iconSize: [32, 32], iconAnchor: [16, 16],
-      html: '<div style="width:32px;height:32px;border-radius:50%;background:#123f6e;border:3px solid #fff;display:grid;place-items:center;color:#fff;font-size:14px;font-weight:900;box-shadow:0 4px 12px rgba(0,0,0,.3);">Tú</div>'
+      html: '<div style="width:32px;height:32px;border-radius:50%;background:#123f6e;border:3px solid #fff;display:grid;place-items:center;color:#fff;font-size:14px;font-weight:900;box-shadow:0 4px 12px rgba(0,0,0,.3);">V</div>'
     })
-  }).addTo(routeMap).bindPopup('Tu ubicacion');
+  }).addTo(routeMap).bindPopup(vehicleRouteName.value);
   L.marker([techLat, techLng], {
     icon: L.divIcon({
       className: '', iconSize: [32, 32], iconAnchor: [16, 32],
       html: '<div style="width:32px;height:32px;border-radius:50% 50% 50% 4px;background:#15803d;border:3px solid #fff;display:grid;place-items:center;color:#fff;font-size:14px;font-weight:900;transform:rotate(-45deg);box-shadow:0 4px 12px rgba(0,0,0,.3);"><span style="transform:rotate(45deg)">T</span></div>'
     })
   }).addTo(routeMap).bindPopup(`Tecnico: ${props.request.technician?.name}`);
-  fetch(`https://router.project-osrm.org/route/v1/driving/${driverLng},${driverLat};${techLng},${techLat}?geometries=geojson&overview=full&steps=true`)
+  fetch(`https://router.project-osrm.org/route/v1/driving/${vehicleLng},${vehicleLat};${techLng},${techLat}?geometries=geojson&overview=full&steps=true`)
     .then(r => r.json())
     .then(data => {
       const route = data.routes?.[0];
@@ -190,7 +178,7 @@ function initMap(driverLat, driverLng, techLat, techLng) {
       routeMap.fitBounds(coords, { padding: [52, 52], maxZoom: 16 });
     })
     .catch(() => {
-      const bounds = L.latLngBounds([driverLat, driverLng], [techLat, techLng]);
+      const bounds = L.latLngBounds([vehicleLat, vehicleLng], [techLat, techLng]);
       routeMap.fitBounds(bounds, { padding: [52, 52], maxZoom: 14 });
     });
 }
@@ -266,7 +254,8 @@ onBeforeUnmount(() => { if(window.Echo && channelName) window.Echo.leave(channel
         <section v-if="request.technician_latitude && request.technician_longitude" class="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
           <h2 class="mb-4 flex items-center gap-2 font-semibold text-[#123f6e]"><MapPin class="h-5 w-5" /> Ubicacion del tecnico</h2>
           <p class="mb-3 text-sm text-slate-600">{{ request.technician_address ?? 'Direccion no registrada' }}</p>
-          <button @click="openRouteMap" class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-md bg-[#123f6e] px-4 py-3 font-semibold text-white transition-colors hover:bg-[#0e2d52]">
+          <p v-if="!hasVehicleRouteLocation" class="mb-3 rounded-md bg-amber-50 p-3 text-sm text-amber-800">El vehiculo asignado no tiene ubicacion GPS disponible.</p>
+          <button :disabled="!hasVehicleRouteLocation" @click="openRouteMap" class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-md bg-[#123f6e] px-4 py-3 font-semibold text-white transition-colors hover:bg-[#0e2d52] disabled:cursor-not-allowed disabled:opacity-60">
             <MapPin class="h-4 w-4" /> Ver ruta en mapa
           </button>
         </section>
@@ -281,7 +270,7 @@ onBeforeUnmount(() => { if(window.Echo && channelName) window.Echo.leave(channel
             <div>
               <h3 class="font-bold text-[#123f6e]">Ruta hacia el tecnico</h3>
               <p v-if="routeInfo" class="text-sm text-slate-500">{{ routeInfo.distance }} km · {{ routeInfo.duration }} min</p>
-              <p v-else-if="locating" class="text-sm text-slate-500">Obteniendo ubicacion...</p>
+              <p v-else-if="locating" class="text-sm text-slate-500">Cargando ubicacion del vehiculo...</p>
             </div>
             <button @click="closeRouteMap" class="cursor-pointer rounded-md p-2 text-slate-500 transition-colors hover:bg-slate-100"><X class="h-5 w-5" /></button>
           </div>
