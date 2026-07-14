@@ -16,6 +16,7 @@ const user = computed(() => page.props.auth?.user ?? null);
 const flash = computed(() => page.props.flash ?? {});
 const unreadCount = ref(page.props.unread_notifications ?? 0);
 let notificationChannel = null;
+let notificationPoll = null;
 const closeHandler = (e) => {
   if (!e.target.closest('[data-notif]')) showNotif.value = false;
   if (!e.target.closest('[data-user-menu]')) showUserMenu.value = false;
@@ -49,8 +50,29 @@ const fetchNotifications = async () => {
   try {
     const { data } = await axios.get('/api/notifications');
     notifList.value = data.data ?? [];
+    unreadCount.value = data.unread_count ?? unreadCount.value;
   } catch { notifList.value = []; }
   loadingNotif.value = false;
+};
+
+const syncNotifications = async () => {
+  try {
+    const { data } = await axios.get('/api/notifications');
+    notifList.value = data.data ?? [];
+    unreadCount.value = data.unread_count ?? unreadCount.value;
+  } catch {}
+};
+
+const pushNotification = (notification) => {
+  if (!notification?.id) {
+    unreadCount.value += 1;
+    if (showNotif.value) syncNotifications();
+    return;
+  }
+
+  const exists = notifList.value.some(n => Number(n.id) === Number(notification.id));
+  if (!exists) notifList.value = [notification, ...notifList.value].slice(0, 30);
+  if (!exists && !notification.read_at) unreadCount.value += 1;
 };
 
 const toggleNotif = () => {
@@ -76,12 +98,16 @@ const markAllAsRead = async () => {
 onMounted(() => {
   if (window.Echo && user.value?.id) {
     notificationChannel = `notifications.${user.value.id}`;
-    window.Echo.channel(notificationChannel).listen('NotificationCreated', () => { unreadCount.value += 1; });
+    window.Echo.private(notificationChannel).listen('NotificationCreated', (event) => {
+      pushNotification(event.notification);
+    });
   }
+  notificationPoll = window.setInterval(syncNotifications, 30000);
   document.addEventListener('click', closeHandler);
 });
 onBeforeUnmount(() => {
   if (window.Echo && notificationChannel) window.Echo.leave(notificationChannel);
+  if (notificationPoll) window.clearInterval(notificationPoll);
   document.removeEventListener('click', closeHandler);
 });
 watch(() => page.url, () => { showNotif.value = false; });
@@ -144,4 +170,3 @@ watch(() => page.url, () => { showNotif.value = false; });
     </div>
   </div>
 </template>
-
