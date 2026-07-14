@@ -89,12 +89,6 @@ const markAsRead = async (n) => {
   if (n.url) router.visit(n.url);
 };
 
-const markAllAsRead = async () => {
-  await axios.patch('/api/notifications/read-all');
-  notifList.value.forEach(n => n.read_at = new Date().toISOString());
-  unreadCount.value = 0;
-};
-
 onMounted(() => {
   if (window.Echo && user.value?.id) {
     notificationChannel = `notifications.${user.value.id}`;
@@ -144,7 +138,6 @@ watch(() => page.url, () => { showNotif.value = false; });
               <div v-if="showNotif" class="absolute right-0 top-full z-50 mt-2 max-h-96 w-80 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
                 <div class="flex items-center justify-between border-b border-slate-100 p-3">
                   <span class="text-sm font-semibold text-slate-800">Notificaciones</span>
-                  <button v-if="unreadCount" @click="markAllAsRead" class="text-xs text-[#123f6e] hover:underline">Marcar todas leidas</button>
                 </div>
                 <div v-if="!loadingNotif && notifList.length === 0" class="p-6 text-center text-sm text-slate-500">No hay notificaciones</div>
                 <div v-if="loadingNotif" class="p-6 text-center text-sm text-slate-400">Cargando...</div>

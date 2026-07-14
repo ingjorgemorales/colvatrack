@@ -10,6 +10,8 @@ class NotificationWebController extends Controller
     public function index(Request $request)
     {
         $perPage = min((int) $request->integer('per_page', 10), 100);
+        Notification::where('user_id', $request->user()->id)->whereNull('read_at')->update(['read_at' => now()]);
+
         return Inertia::render('Notifications/Index', [
             'notifications' => Notification::where('user_id', auth()->id())->latest()->paginate($perPage)->withQueryString(),
             'filters' => ['per_page' => $perPage],
