@@ -42,7 +42,7 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'role_id' => ['required', 'exists:roles,id'], 'name' => ['required', 'string', 'max:120'], 'last_name' => ['nullable', 'string', 'max:120'],
+            'role_id' => ['required', 'exists:roles,id'], 'name' => ['required', 'string', 'max:120'], 'last_name' => ['required', 'string', 'max:120'],
             'cedula' => ['required', 'integer', 'min:1', 'unique:users,cedula'],
             'email' => ['required', 'email', 'unique:users,email'], 'phone' => ['nullable', 'string', 'max:40'], 'cargo' => ['nullable', 'string', 'max:120'],
             'status' => ['required', 'in:active,inactive'],
@@ -64,7 +64,7 @@ class UserController extends Controller
     public function update(Request $request, User $usuario)
     {
         $data = $request->validate([
-            'role_id' => ['required', 'exists:roles,id'], 'name' => ['required', 'string', 'max:120'], 'last_name' => ['nullable', 'string', 'max:120'],
+            'role_id' => ['required', 'exists:roles,id'], 'name' => ['required', 'string', 'max:120'], 'last_name' => ['required', 'string', 'max:120'],
             'cedula' => ['required', 'integer', 'min:1', Rule::unique('users','cedula')->ignore($usuario->id)],
             'email' => ['required', 'email', Rule::unique('users','email')->ignore($usuario->id)], 'phone' => ['nullable', 'string', 'max:40'], 'cargo' => ['nullable', 'string', 'max:120'],
             'status' => ['required', 'in:active,inactive'], 'password' => ['nullable', 'confirmed', Password::min(8)->mixedCase()->numbers()->symbols()],

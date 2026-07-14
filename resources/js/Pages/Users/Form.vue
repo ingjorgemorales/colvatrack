@@ -17,7 +17,7 @@ const submit = () => isEdit ? form.patch(`/usuarios/${props.user.id}`) : form.po
       <div class="mb-5 flex items-center justify-between"><Link href="/usuarios" class="inline-flex items-center gap-2 text-sm font-semibold text-[#123f6e]"><ArrowLeft class="h-4 w-4" /> Volver</Link></div>
       <form class="grid gap-4 md:grid-cols-2" @submit.prevent="submit">
         <label><span class="text-sm font-medium text-slate-600">Nombre <span class="text-red-600">*</span></span><input v-model="form.name" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-3" required /></label>
-        <label><span class="text-sm font-medium text-slate-600">Apellido</span><input v-model="form.last_name" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-3" /></label>
+        <label><span class="text-sm font-medium text-slate-600">Apellido <span class="text-red-600">*</span></span><input v-model="form.last_name" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-3" required /></label>
         <label><span class="text-sm font-medium text-slate-600">Cedula <span class="text-red-600">*</span></span><input v-model="form.cedula" type="number" min="1" step="1" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-3" required /></label>
         <label><span class="text-sm font-medium text-slate-600">Correo <span class="text-red-600">*</span></span><input v-model="form.email" type="email" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-3" required /></label>
         <label><span class="text-sm font-medium text-slate-600">Telefono</span><input v-model="form.phone" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-3" /></label>

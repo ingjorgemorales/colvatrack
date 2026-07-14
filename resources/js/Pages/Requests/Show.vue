@@ -2,18 +2,20 @@
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { ArrowLeft, CheckCircle, Clock3, MapPin, MessageCircle, PackageCheck, Send, Truck, X } from '@lucide/vue';
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import L from 'leaflet';
 
 const props = defineProps({ request: Object, role: String, allowedTransitions: Array });
 const commentForm = useForm({ status: '', comment: '' });
 const messageForm = useForm({ message: '' });
 const messages = ref([...(props.request.chat?.messages ?? [])]);
+const sendingMessage = ref(false);
 const chatBox = ref(null);
 const allowed = computed(() => props.allowedTransitions ?? []);
 let channelName = null;
 let requestChannelName = null;
 let refreshTimer = null;
+let chatPollTimer = null;
 let routeMap = null;
 const showRouteMap = ref(false);
 const mapEl = ref(null);
@@ -78,7 +80,60 @@ function isCurrentRequestEvent(event) {
   return Number(id) === Number(props.request.id);
 }
 function scrollChat(){ nextTick(() => { if(chatBox.value) chatBox.value.scrollTop = chatBox.value.scrollHeight; }); }
-function sendMessage(){ messageForm.post(`/solicitudes/${props.request.id}/chat/messages`, { preserveScroll: true, onSuccess: () => { if(messageForm.message.trim()){ messages.value.push({ id: Date.now(), message: messageForm.message, sender: props.request.technician, sender_id: null, created_at: 'ahora' }); } messageForm.reset(); scrollChat(); } }); }
+function mergeMessages(incoming = []) {
+  const seen = new Set(messages.value.map((message) => Number(message.id)));
+  const freshMessages = incoming.filter((message) => message?.id && !seen.has(Number(message.id)));
+
+  if (!freshMessages.length) return;
+
+  messages.value = [...messages.value, ...freshMessages].sort((a, b) => {
+    const first = new Date(a.created_at ?? 0).getTime();
+    const second = new Date(b.created_at ?? 0).getTime();
+    return first - second;
+  });
+  scrollChat();
+}
+function markChatRead() {
+  return window.axios
+    .patch(`/solicitudes/${props.request.id}/chat/read`)
+    .then(() => window.dispatchEvent(new CustomEvent('notifications:sync')))
+    .catch(() => {});
+}
+async function syncChat() {
+  if (!props.request.chat?.id) return;
+
+  try {
+    const { data } = await window.axios.get(`/api/tool-requests/${props.request.id}/chat`);
+    mergeMessages(data.messages ?? []);
+    await markChatRead();
+  } catch (error) {
+    // Si Reverb o la API tienen un corte temporal, la vista conserva los mensajes ya cargados.
+  }
+}
+function receiveChatMessage(event) {
+  if (!event?.message) return;
+
+  mergeMessages([event.message]);
+  markChatRead();
+}
+async function sendMessage(){
+  const text = messageForm.message.trim();
+  if (!text || sendingMessage.value) return;
+
+  messageForm.clearErrors();
+  sendingMessage.value = true;
+
+  try {
+    const { data } = await window.axios.post(`/api/tool-requests/${props.request.id}/chat/messages`, { message: text });
+    mergeMessages([data]);
+    messageForm.reset();
+  } catch (error) {
+    messageForm.setError('message', error.response?.data?.message ?? 'No fue posible enviar el mensaje.');
+  } finally {
+    sendingMessage.value = false;
+    scrollChat();
+  }
+}
 
 function openRouteMap() {
   showRouteMap.value = true;
@@ -146,10 +201,10 @@ function closeRouteMap() {
 
 onMounted(() => {
   scrollChat();
-  window.axios.patch(`/solicitudes/${props.request.id}/chat/read`).catch(() => {});
+  markChatRead();
   if (window.Echo && props.request.chat?.id) {
     channelName = `chat.${props.request.chat.id}`;
-    window.Echo.channel(channelName).listen('ChatMessageSent', (event) => { messages.value.push(event.message); scrollChat(); });
+    window.Echo.private(channelName).listen('ChatMessageSent', receiveChatMessage);
   }
   if (window.Echo) {
     requestChannelName = 'tool-requests';
@@ -158,8 +213,10 @@ onMounted(() => {
     });
   }
   refreshTimer = window.setInterval(refreshRequest, 30000);
+  chatPollTimer = window.setInterval(syncChat, 30000);
 });
-onBeforeUnmount(() => { if(window.Echo && channelName) window.Echo.leave(channelName); if(window.Echo && requestChannelName) window.Echo.leave(requestChannelName); if(refreshTimer) window.clearInterval(refreshTimer); closeRouteMap(); });
+watch(() => props.request.chat?.messages, (incoming) => mergeMessages(incoming ?? []));
+onBeforeUnmount(() => { if(window.Echo && channelName) window.Echo.leave(channelName); if(window.Echo && requestChannelName) window.Echo.leave(requestChannelName); if(refreshTimer) window.clearInterval(refreshTimer); if(chatPollTimer) window.clearInterval(chatPollTimer); closeRouteMap(); });
 </script>
 <template>
   <Head :title="`Solicitud #${request.id}`" />
@@ -214,7 +271,7 @@ onBeforeUnmount(() => { if(window.Echo && channelName) window.Echo.leave(channel
           </button>
         </section>
 
-        <section class="rounded-md border border-slate-200 bg-white p-5 shadow-sm"><h2 class="mb-3 flex items-center gap-2 font-semibold text-[#123f6e]"><MessageCircle class="h-5 w-5" /> Chat</h2><div ref="chatBox" class="mb-3 h-80 space-y-3 overflow-y-auto rounded-md bg-slate-50 p-3"><div v-for="m in messages" :key="m.id" class="rounded-md bg-white p-3 text-sm shadow-sm"><div class="mb-1 font-semibold text-[#123f6e]">{{ m.sender?.name ?? 'Usuario' }}</div><p class="text-slate-700">{{ m.message }}</p><p class="mt-1 text-xs text-slate-400">{{ m.created_at }}</p></div><p v-if="!messages.length" class="py-8 text-center text-sm text-slate-500">Sin mensajes todavia.</p></div><form class="flex gap-2" @submit.prevent="sendMessage"><input v-model="messageForm.message" class="min-w-0 flex-1 rounded-md border border-slate-300 px-3 py-3" placeholder="Escribir mensaje" /><button class="cursor-pointer rounded-md bg-[#123f6e] px-4 text-white transition-colors hover:bg-[#0e2d52]"><Send class="h-5 w-5" /></button></form><p v-for="error in messageForm.errors" :key="error" class="mt-2 text-sm text-red-600">{{ error }}</p></section>
+        <section class="rounded-md border border-slate-200 bg-white p-5 shadow-sm"><h2 class="mb-3 flex items-center gap-2 font-semibold text-[#123f6e]"><MessageCircle class="h-5 w-5" /> Chat</h2><div ref="chatBox" class="mb-3 h-80 space-y-3 overflow-y-auto rounded-md bg-slate-50 p-3"><div v-for="m in messages" :key="m.id" class="rounded-md bg-white p-3 text-sm shadow-sm"><div class="mb-1 font-semibold text-[#123f6e]">{{ m.sender?.name ?? 'Usuario' }}</div><p class="text-slate-700">{{ m.message }}</p><p class="mt-1 text-xs text-slate-400">{{ m.created_at }}</p></div><p v-if="!messages.length" class="py-8 text-center text-sm text-slate-500">Sin mensajes todavia.</p></div><form class="flex gap-2" @submit.prevent="sendMessage"><input v-model="messageForm.message" class="min-w-0 flex-1 rounded-md border border-slate-300 px-3 py-3" placeholder="Escribir mensaje" /><button :disabled="sendingMessage" class="cursor-pointer rounded-md bg-[#123f6e] px-4 text-white transition-colors hover:bg-[#0e2d52] disabled:cursor-not-allowed disabled:opacity-60"><Send class="h-5 w-5" /></button></form><p v-for="error in messageForm.errors" :key="error" class="mt-2 text-sm text-red-600">{{ error }}</p></section>
       </aside>
     </section>
     <Teleport to="body">

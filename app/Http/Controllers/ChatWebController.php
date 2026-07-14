@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers;
 
+use App\Models\Notification;
 use App\Models\ToolRequest;
 use App\Services\ChatService;
 use Illuminate\Http\Request;
@@ -22,6 +23,12 @@ class ChatWebController extends Controller
         $user = $request->user();
         abort_unless($user->hasRole('Administrador') || $solicitude->technician_id === $user->id || $solicitude->driver_id === $user->id, 403);
         $solicitude->chat?->messages()->where('sender_id', '!=', $user->id)->whereNull('read_at')->update(['read_at' => now()]);
+        Notification::query()
+            ->where('user_id', $user->id)
+            ->where('type', 'chat')
+            ->whereNull('read_at')
+            ->where('data_json->tool_request_id', $solicitude->id)
+            ->update(['read_at' => now()]);
         return back();
     }
 }

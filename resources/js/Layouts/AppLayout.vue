@@ -97,11 +97,13 @@ onMounted(() => {
     });
   }
   notificationPoll = window.setInterval(syncNotifications, 30000);
+  window.addEventListener('notifications:sync', syncNotifications);
   document.addEventListener('click', closeHandler);
 });
 onBeforeUnmount(() => {
   if (window.Echo && notificationChannel) window.Echo.leave(notificationChannel);
   if (notificationPoll) window.clearInterval(notificationPoll);
+  window.removeEventListener('notifications:sync', syncNotifications);
   document.removeEventListener('click', closeHandler);
 });
 watch(() => page.url, () => { showNotif.value = false; });
