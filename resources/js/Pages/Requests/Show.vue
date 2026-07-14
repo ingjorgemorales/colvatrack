@@ -1,5 +1,5 @@
 <script setup>
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { ArrowLeft, CheckCircle, Clock3, MapPin, MessageCircle, PackageCheck, Send, Truck, X } from '@lucide/vue';
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
@@ -12,6 +12,8 @@ const messages = ref([...(props.request.chat?.messages ?? [])]);
 const chatBox = ref(null);
 const allowed = computed(() => props.allowedTransitions ?? []);
 let channelName = null;
+let requestChannelName = null;
+let refreshTimer = null;
 let routeMap = null;
 const showRouteMap = ref(false);
 const mapEl = ref(null);
@@ -67,6 +69,14 @@ const currentStatusClass = computed(() => statusClasses[props.request.status] ??
 function statusLabel(status) { return labels[status] ?? status; }
 function actionLabel(status) { return actionLabels[status] ?? `Marcar ${statusLabel(status)}`; }
 function change(status){ commentForm.status = status; commentForm.patch(`/solicitudes/${props.request.id}/status`, { preserveScroll: true }); }
+function refreshRequest() {
+  if (commentForm.processing) return;
+  router.reload({ only: ['request', 'allowedTransitions'], preserveScroll: true, preserveState: true });
+}
+function isCurrentRequestEvent(event) {
+  const id = event?.tool_request?.id ?? event?.toolRequest?.id ?? event?.id;
+  return Number(id) === Number(props.request.id);
+}
 function scrollChat(){ nextTick(() => { if(chatBox.value) chatBox.value.scrollTop = chatBox.value.scrollHeight; }); }
 function sendMessage(){ messageForm.post(`/solicitudes/${props.request.id}/chat/messages`, { preserveScroll: true, onSuccess: () => { if(messageForm.message.trim()){ messages.value.push({ id: Date.now(), message: messageForm.message, sender: props.request.technician, sender_id: null, created_at: 'ahora' }); } messageForm.reset(); scrollChat(); } }); }
 
@@ -141,8 +151,15 @@ onMounted(() => {
     channelName = `chat.${props.request.chat.id}`;
     window.Echo.channel(channelName).listen('ChatMessageSent', (event) => { messages.value.push(event.message); scrollChat(); });
   }
+  if (window.Echo) {
+    requestChannelName = 'tool-requests';
+    window.Echo.channel(requestChannelName).listen('ToolRequestStatusChanged', (event) => {
+      if (isCurrentRequestEvent(event)) refreshRequest();
+    });
+  }
+  refreshTimer = window.setInterval(refreshRequest, 30000);
 });
-onBeforeUnmount(() => { if(window.Echo && channelName) window.Echo.leave(channelName); closeRouteMap(); });
+onBeforeUnmount(() => { if(window.Echo && channelName) window.Echo.leave(channelName); if(window.Echo && requestChannelName) window.Echo.leave(requestChannelName); if(refreshTimer) window.clearInterval(refreshTimer); closeRouteMap(); });
 </script>
 <template>
   <Head :title="`Solicitud #${request.id}`" />
