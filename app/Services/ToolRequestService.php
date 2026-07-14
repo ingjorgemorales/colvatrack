@@ -51,13 +51,16 @@ class ToolRequestService
             $this->guardTransition($old, $status);
             $request->loadMissing('items', 'technician', 'driver', 'vehicle');
 
-            if (in_array($status, ['rechazada', 'cancelada'], true) && in_array($old, ['pendiente', 'aceptada'], true)) {
+            if (in_array($status, ['rechazada', 'cancelada'], true) && in_array($old, ['pendiente', 'aceptada', 'en_camino'], true)) {
                 foreach ($request->items as $item) { $this->inventory->releaseReserved($request->vehicle_id, $item->inventory_item_id, $item->quantity, $request->id, 'Solicitud '.$status); $item->update(['status' => 'released']); }
             }
             if ($status === 'entregada' && $old !== 'entregada') {
                 foreach ($request->items as $item) { $this->inventory->markDelivered($request->vehicle_id, $item->inventory_item_id, $item->quantity, $request->id); $item->update(['status' => 'delivered']); }
             }
             if ($status === 'recogida' && $old !== 'recogida') {
+                foreach ($request->items as $item) { $item->update(['status' => 'picked_up']); }
+            }
+            if ($status === 'finalizada' && $old !== 'finalizada') {
                 foreach ($request->items as $item) { $this->inventory->returnDelivered($request->vehicle_id, $item->inventory_item_id, $item->quantity, $request->id); $item->update(['status' => 'returned']); }
             }
 
