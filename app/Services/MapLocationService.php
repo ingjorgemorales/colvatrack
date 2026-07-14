@@ -14,12 +14,17 @@ class MapLocationService
     {
         $user = auth()->user();
 
-        $vehicles = Vehicle::with(['driver', 'inventory.item'])
+        $vehicles = Vehicle::with(['driver', 'inventory.item', 'activeToolRequest.technician'])
             ->where('status', 'active')
             ->whereNotNull('current_latitude')
             ->whereNotNull('current_longitude')
             ->when($user?->hasRole('Conductor'), fn ($q) => $q->where('driver_id', $user->id))
-            ->get();
+            ->get()
+            ->map(function (Vehicle $vehicle) {
+                $vehicle->setAttribute('is_occupied', (bool) $vehicle->activeToolRequest);
+                $vehicle->setAttribute('availability_status', $vehicle->activeToolRequest ? 'ocupado' : 'disponible');
+                return $vehicle;
+            });
 
         return [
             'vehicles' => $this->movement->decorate($vehicles)->values(),

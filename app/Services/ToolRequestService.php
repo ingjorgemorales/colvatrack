@@ -6,6 +6,7 @@ use App\Events\ToolRequestStatusChanged;
 use App\Models\Chat;
 use App\Models\ToolRequest;
 use App\Models\User;
+use App\Models\Vehicle;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -19,6 +20,13 @@ class ToolRequestService
         unset($data['items']);
 
         return DB::transaction(function () use ($data, $items) {
+            $vehicle = Vehicle::whereKey($data['vehicle_id'])->lockForUpdate()->firstOrFail();
+            $activeRequest = ToolRequest::where('vehicle_id', $vehicle->id)->activeForVehicle()->lockForUpdate()->first();
+            if ($activeRequest) {
+                throw new InvalidArgumentException('El vehiculo '.$vehicle->plate.' no esta disponible porque tiene la solicitud #'.$activeRequest->id.' en estado '.$activeRequest->status.'.');
+            }
+
+            $data['driver_id'] = $data['driver_id'] ?? $vehicle->driver_id;
             $request = ToolRequest::create($data + ['status' => 'pendiente', 'requested_at' => now()]);
             foreach ($items as $item) {
                 $request->items()->create(['inventory_item_id' => $item['inventory_item_id'], 'quantity' => $item['quantity'], 'status' => 'reserved']);

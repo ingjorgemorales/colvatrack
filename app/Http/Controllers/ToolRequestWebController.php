@@ -6,6 +6,7 @@ use App\Models\Vehicle;
 use App\Services\ToolRequestService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use InvalidArgumentException;
 
 class ToolRequestWebController extends Controller
 {
@@ -44,13 +45,15 @@ class ToolRequestWebController extends Controller
             'updated_at' => $user->location_updated_at,
         ];
 
-        $vehicles = Vehicle::with(['driver','inventory.item.category'])
+        $vehicles = Vehicle::with(['driver','inventory.item.category','activeToolRequest.technician'])
             ->where('status', 'active')
             ->get()
             ->map(function (Vehicle $vehicle) use ($userLocation) {
                 $vehicle->setAttribute('distance_meters', $this->distanceFromUser($userLocation, $vehicle));
                 $vehicle->setAttribute('available_items_count', $vehicle->inventory->filter(fn ($row) => (int) $row->quantity_available > 0)->count());
                 $vehicle->setAttribute('has_available_inventory', $vehicle->available_items_count > 0);
+                $vehicle->setAttribute('is_occupied', (bool) $vehicle->activeToolRequest);
+                $vehicle->setAttribute('availability_status', $vehicle->activeToolRequest ? 'ocupado' : 'disponible');
                 return $vehicle;
             })
             ->sortBy(fn (Vehicle $vehicle) => $vehicle->distance_meters ?? PHP_INT_MAX)
@@ -80,7 +83,12 @@ class ToolRequestWebController extends Controller
         $data['technician_id'] = $request->user()->id;
         $data['technician_latitude'] = $request->user()->current_latitude;
         $data['technician_longitude'] = $request->user()->current_longitude;
-        $toolRequest = $service->create($data);
+        try {
+            $toolRequest = $service->create($data);
+        } catch (InvalidArgumentException $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        }
+
         return redirect()->route('solicitudes.show', $toolRequest)->with('success', 'Solicitud creada y herramientas reservadas.');
     }
 

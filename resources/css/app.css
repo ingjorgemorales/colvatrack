@@ -37,6 +37,10 @@ button, input, select, textarea { font: inherit; }
     background: rgba(100, 116, 139, 0.12);
     box-shadow: 0 0 0 8px rgba(100, 116, 139, 0.06);
 }
+.vehicle-marker.is-occupied .vehicle-marker__halo {
+    background: rgba(245, 158, 11, 0.2);
+    box-shadow: 0 0 0 8px rgba(245, 158, 11, 0.1);
+}
 .vehicle-marker__car {
     position: absolute;
     left: 13px;
@@ -52,6 +56,7 @@ button, input, select, textarea { font: inherit; }
 }
 .vehicle-marker.is-fresh .vehicle-marker__car { background: #15803d; }
 .vehicle-marker.is-stale .vehicle-marker__car { background: #64748b; }
+.vehicle-marker.is-occupied .vehicle-marker__car { background: #b45309; }
 .vehicle-marker__car svg {
     width: 35px;
     height: 35px;
@@ -82,6 +87,20 @@ button, input, select, textarea { font: inherit; }
     text-overflow: ellipsis;
     white-space: nowrap;
     box-shadow: 0 5px 14px rgba(15, 23, 42, 0.18);
+}
+.vehicle-marker__badge {
+    position: absolute;
+    right: -8px;
+    top: -4px;
+    border: 1px solid rgba(146, 64, 14, 0.24);
+    border-radius: 4px;
+    background: #f59e0b;
+    color: #ffffff;
+    font-size: 9px;
+    font-weight: 900;
+    line-height: 1;
+    padding: 3px 4px;
+    box-shadow: 0 5px 12px rgba(146, 64, 14, 0.22);
 }
 
 .technician-marker {
@@ -153,6 +172,8 @@ button, input, select, textarea { font: inherit; }
 .vehicle-popup__status.is-stopped { background: #334155; }
 .vehicle-popup__status.is-fresh { background: #16a34a; }
 .vehicle-popup__status.is-stale { background: #64748b; }
+.vehicle-popup__status.is-available { background: #123f6e; }
+.vehicle-popup__status.is-occupied { background: #b45309; }
 .vehicle-popup dl { display: grid; gap: 7px; margin: 0 0 10px; }
 .vehicle-popup dl > div { display: grid; grid-template-columns: 112px 1fr; gap: 8px; }
 .vehicle-popup dt { color: #64748b; font-weight: 700; }
@@ -162,6 +183,7 @@ button, input, select, textarea { font: inherit; }
 .vehicle-popup__actions a { display: inline-block; border-radius: 4px; padding: 8px 10px; text-decoration: none; font-weight: 800; }
 .vehicle-popup__actions a:first-child { background: #123f6e; color: #ffffff; }
 .vehicle-popup__actions a:last-child { background: #e6eef7; color: #123f6e; }
+.vehicle-popup__disabled-action { display: inline-block; border-radius: 4px; background: #fef3c7; color: #92400e; padding: 8px 10px; font-weight: 800; }
 .leaflet-marker-icon { background: transparent; border: 0; }
 
 .route-marker {
