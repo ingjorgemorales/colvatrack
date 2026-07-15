@@ -23,7 +23,10 @@ const submit = () => form.post('/login');
         <p v-if="form.errors.email" class="text-sm text-red-600">{{ form.errors.email }}</p>
         <label class="flex items-start gap-2 text-xs text-slate-600"><input v-model="acceptPolicy" type="checkbox" class="mt-0.5 shrink-0 rounded border-slate-300 text-[#123f6e] focus:ring-[#123f6e]" /><span>Acepto la <a href="https://colvatel.com.co/wp-content/uploads/2025/07/E01.D05.-Politica-de-Datos-Personales.pdf" target="_blank" class="font-medium text-[#123f6e] underline hover:text-[#0d3158]">politica de tratamiento de datos personales</a> y los <a href="/terminos" class="font-medium text-[#123f6e] underline hover:text-[#0d3158]">terminos y condiciones</a>.</span></label>
         <button class="w-full rounded-md bg-[#123f6e] px-4 py-3 font-semibold text-white hover:bg-[#0d3158]" :disabled="form.processing || !acceptPolicy">Ingresar</button>
-        <Link href="/forgot-password" class="block text-center text-sm font-medium text-[#123f6e]">Recuperar contraseña</Link>
+        <div class="grid gap-2 text-center text-sm font-medium text-[#123f6e]">
+          <Link href="/forgot-password">Recuperar contrasena</Link>
+          <Link href="/activate-account">Activar cuenta</Link>
+        </div>
       </form>
       <p class="mt-6 text-center text-xs text-slate-500">&copy; 2026 Colvatel S.A. &mdash; Todos los derechos reservados</p>
       <p class="mt-1 text-center text-xs text-slate-400">Desarrollado por el equipo de TI</p>

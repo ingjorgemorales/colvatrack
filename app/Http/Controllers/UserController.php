@@ -5,9 +5,11 @@ use App\Mail\WelcomeMail;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Services\SecurityCodeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
@@ -39,7 +41,7 @@ class UserController extends Controller
         return Inertia::render('Users/Form', ['user' => null, 'roles' => Role::orderBy('name')->get(), 'vehicles' => Vehicle::orderBy('plate')->get()]);
     }
 
-    public function store(Request $request)
+    public function store(Request $request, SecurityCodeService $codes)
     {
         $data = $request->validate([
             'role_id' => ['required', 'exists:roles,id'], 'name' => ['required', 'string', 'max:120'], 'last_name' => ['required', 'string', 'max:120'],
@@ -48,11 +50,12 @@ class UserController extends Controller
             'status' => ['required', 'in:active,inactive'],
             'must_change_password' => ['boolean'], 'vehicle_id' => ['nullable', 'exists:vehicles,id'],
         ]);
-        $vehicleId = $data['vehicle_id'] ?? null; $plainPassword = substr(str_shuffle('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%&*'), 0, 12); unset($data['vehicle_id']);
-        $data['password'] = Hash::make($plainPassword); $data['must_change_password'] = (bool) ($data['must_change_password'] ?? true);
+        $data['email'] = strtolower(trim($data['email']));
+        $vehicleId = $data['vehicle_id'] ?? null; unset($data['vehicle_id']);
+        $data['password'] = Hash::make(Str::random(48)); $data['must_change_password'] = true;
         $user = User::create($data);
         if ($vehicleId) { Vehicle::where('driver_id', $user->id)->update(['driver_id' => null]); Vehicle::whereKey($vehicleId)->update(['driver_id' => $user->id]); }
-        try { Mail::to($user->email)->send(new WelcomeMail($user->name, $user->email, $plainPassword)); } catch (\Throwable $e) { \Illuminate\Support\Facades\Log::warning('No fue posible enviar correo de bienvenida', ['to' => $user->email, 'error' => $e->getMessage()]); }
+        try { $activationCode = $codes->issue($user, $user->email, 'account_activation', 1440); Mail::to($user->email)->send(new WelcomeMail($user->name, $user->email, $activationCode)); } catch (\Throwable $e) { \Illuminate\Support\Facades\Log::warning('No fue posible enviar correo de bienvenida', ['to' => $user->email, 'error' => $e->getMessage()]); }
         return redirect()->route('usuarios.index')->with('success', 'Usuario creado.');
     }
 
