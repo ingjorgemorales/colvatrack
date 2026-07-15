@@ -32,7 +32,6 @@ class InventoryController extends Controller
         return Inertia::render('Inventory/Index', [
             'vehicles' => $vehicles,
             'filters' => ['search' => $search, 'tool_id' => $toolId, 'per_page' => $perPage],
-            'categories' => InventoryCategory::orderBy('name')->get(),
             'items' => InventoryItem::with('category')->withSum('vehicleInventories', 'quantity_total')->where('status', 'active')->orderBy('name')->get(),
             'canManageCatalog' => $user->hasRole('Administrador'),
         ]);
@@ -48,6 +47,38 @@ class InventoryController extends Controller
                 ->paginate($perPage)
                 ->withQueryString(),
             'filters' => ['per_page' => $perPage],
+        ]);
+    }
+
+    public function catalog(Request $request)
+    {
+        abort_unless($request->user()->hasRole('Administrador'), 403);
+
+        $search = $request->get('search', '');
+        $categoryId = $request->get('category_id', '');
+        $status = $request->get('status', '');
+        $perPage = min((int) $request->get('per_page', 15), 100);
+
+        return Inertia::render('Inventory/Catalog', [
+            'items' => InventoryItem::with('category')
+                ->withSum('vehicleInventories', 'quantity_total')
+                ->when($search, fn ($q) => $q->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                        ->orWhere('description', 'like', "%{$search}%")
+                        ->orWhereHas('category', fn ($q) => $q->where('name', 'like', "%{$search}%"));
+                }))
+                ->when($categoryId, fn ($q) => $q->where('inventory_category_id', $categoryId))
+                ->when($status !== '', fn ($q) => $q->where('status', $status))
+                ->orderBy('name')
+                ->paginate($perPage)
+                ->withQueryString(),
+            'categories' => InventoryCategory::orderBy('name')->get(),
+            'filters' => [
+                'search' => $search,
+                'category_id' => $categoryId,
+                'status' => $status,
+                'per_page' => $perPage,
+            ],
         ]);
     }
 
