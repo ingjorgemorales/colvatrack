@@ -1,7 +1,6 @@
 <?php
 use App\Http\Controllers\AuditController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
-use App\Http\Controllers\Auth\AccountActivationController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\PasswordCodeController;
@@ -31,8 +30,6 @@ Route::middleware('guest')->group(function () {
     Route::post('/password-code/verify', [PasswordCodeController::class, 'store'])->name('password.code.verify');
     Route::get('/reset-password', [NewPasswordController::class, 'create'])->name('password.reset');
     Route::post('/reset-password', [NewPasswordController::class, 'store'])->name('password.store');
-    Route::get('/activate-account', [AccountActivationController::class, 'create'])->name('account.activate');
-    Route::post('/activate-account', [AccountActivationController::class, 'store'])->name('account.activate.store');
 });
 
 Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->middleware('auth')->name('logout');

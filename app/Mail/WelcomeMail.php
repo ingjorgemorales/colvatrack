@@ -15,13 +15,13 @@ class WelcomeMail extends Mailable
     public function __construct(
         public string $name,
         public string $email,
-        public string $activationCode,
+        public string $password,
     ) {}
 
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Activa tu cuenta ColvaTrack',
+            subject: 'Bienvenido a ColvaTrack - Credenciales de acceso',
         );
     }
 
@@ -32,7 +32,7 @@ class WelcomeMail extends Mailable
             with: [
                 'name' => $this->name,
                 'email' => $this->email,
-                'activationCode' => $this->activationCode,
+                'password' => $this->password,
             ],
         );
     }

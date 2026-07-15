@@ -5,7 +5,6 @@ use App\Mail\WelcomeMail;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\Vehicle;
-use App\Services\SecurityCodeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -41,7 +40,7 @@ class UserController extends Controller
         return Inertia::render('Users/Form', ['user' => null, 'roles' => Role::orderBy('name')->get(), 'vehicles' => Vehicle::orderBy('plate')->get()]);
     }
 
-    public function store(Request $request, SecurityCodeService $codes)
+    public function store(Request $request)
     {
         $data = $request->validate([
             'role_id' => ['required', 'exists:roles,id'], 'name' => ['required', 'string', 'max:120'], 'last_name' => ['required', 'string', 'max:120'],
@@ -52,10 +51,11 @@ class UserController extends Controller
         ]);
         $data['email'] = strtolower(trim($data['email']));
         $vehicleId = $data['vehicle_id'] ?? null; unset($data['vehicle_id']);
-        $data['password'] = Hash::make(Str::random(48)); $data['must_change_password'] = true;
+        $plainPassword = Str::password(12);
+        $data['password'] = Hash::make($plainPassword); $data['must_change_password'] = true;
         $user = User::create($data);
         if ($vehicleId) { Vehicle::where('driver_id', $user->id)->update(['driver_id' => null]); Vehicle::whereKey($vehicleId)->update(['driver_id' => $user->id]); }
-        try { $activationCode = $codes->issue($user, $user->email, 'account_activation', 1440); Mail::to($user->email)->send(new WelcomeMail($user->name, $user->email, $activationCode)); } catch (\Throwable $e) { \Illuminate\Support\Facades\Log::warning('No fue posible enviar correo de bienvenida', ['to' => $user->email, 'error' => $e->getMessage()]); }
+        try { Mail::to($user->email)->send(new WelcomeMail($user->name, $user->email, $plainPassword)); } catch (\Throwable $e) { \Illuminate\Support\Facades\Log::warning('No fue posible enviar correo de bienvenida', ['to' => $user->email, 'error' => $e->getMessage()]); }
         return redirect()->route('usuarios.index')->with('success', 'Usuario creado.');
     }
 
