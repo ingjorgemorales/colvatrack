@@ -17,8 +17,9 @@ class ChatService
         try { broadcast(new ChatMessageSent($msg))->toOthers(); } catch (\Throwable $e) { /* WebSocket no disponible */ }
 
         if ($recipient) {
+            $this->notifications->create($recipient->id, 'Nuevo mensaje de chat', 'Tienes un nuevo mensaje en la solicitud #'.$chat->tool_request_id, 'chat', ['tool_request_id' => $chat->tool_request_id, 'chat_id' => $chat->id]);
+
             app()->terminating(function () use ($recipient, $chat) {
-                $this->notifications->create($recipient->id, 'Nuevo mensaje de chat', 'Tienes un nuevo mensaje en la solicitud #'.$chat->tool_request_id, 'chat', ['tool_request_id' => $chat->tool_request_id, 'chat_id' => $chat->id]);
                 $this->mail->sendPlain($recipient->email, 'Nuevo mensaje en ColvaTrack', 'Tienes un nuevo mensaje en la solicitud #'.$chat->tool_request_id.'. Ingresa a ColvaTrack para responder.');
             });
         }
