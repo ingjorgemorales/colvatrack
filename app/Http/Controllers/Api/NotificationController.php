@@ -6,13 +6,7 @@ class NotificationController extends Controller {
     public function index(){
         $notifications = Notification::where('user_id',auth()->id())->latest()->paginate(30)
             ->through(fn ($n) => array_merge($n->toArray(), [
-                'url' => match ($n->type) {
-                    'tool_request', 'tool_request_status', 'chat' => $n->data_json ? '/solicitudes/'.$n->data_json['tool_request_id'] : null,
-                    'gps_stale_summary' => '/mapa',
-                    'request_delay_summary' => '/solicitudes',
-                    'low_stock_summary' => '/inventario',
-                    default => null,
-                },
+                'url' => $n->url(),
             ]));
 
         return response()->json(array_merge($notifications->toArray(), [

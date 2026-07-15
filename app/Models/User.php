@@ -50,6 +50,11 @@ class User extends Authenticatable
         return $this->hasMany(Notification::class);
     }
 
+    public function mobileDeviceTokens()
+    {
+        return $this->hasMany(MobileDeviceToken::class);
+    }
+
     public function hasRole(string ...$roles): bool
     {
         return $this->role && in_array($this->role->name, $roles, true);

@@ -71,12 +71,11 @@ class ToolRequestService
             $request->histories()->create(['old_status' => $old, 'new_status' => $status, 'changed_by' => $userId, 'comment' => $comment, 'created_at' => now()]);
             $request = $request->fresh(['items.item','histories.user','vehicle','technician','driver']);
 
-            $recipient = $request->technician_id === $userId ? $request->driver : $request->technician;
-            if ($recipient) {
-                $title = 'Solicitud '.$status;
-                $message = 'La solicitud #'.$request->id.' cambio de '.$old.' a '.$status.'.';
-                $this->notifications->create($recipient->id, $title, $message, 'tool_request_status', ['tool_request_id' => $request->id, 'old_status' => $old, 'new_status' => $status]);
-                if (in_array($status, ['aceptada','rechazada','para_recoger','finalizada'], true)) { $this->mail->sendPlain($recipient->email, $title.' en ColvaTrack', $message); }
+            $title = 'Solicitud '.$this->statusLabel($status);
+            $message = 'La solicitud #'.$request->id.' cambio de '.$this->statusLabel($old).' a '.$this->statusLabel($status).' para el vehiculo '.$request->vehicle?->plate.'.';
+            foreach ($this->participants($request) as $participant) {
+                $this->notifications->create($participant->id, $title, $message, 'tool_request_status', ['tool_request_id' => $request->id, 'old_status' => $old, 'new_status' => $status]);
+                $this->mail->sendPlain($participant->email, $title.' en ColvaTrack', $message);
             }
 
             try { broadcast(new ToolRequestStatusChanged($request))->toOthers(); } catch (\Throwable $e) { /* WebSocket no disponible */ }
@@ -131,6 +130,27 @@ class ToolRequestService
     private function transitions(): array
     {
         return ['pendiente' => ['aceptada', 'rechazada', 'cancelada'], 'aceptada' => ['en_camino', 'cancelada'], 'en_camino' => ['entregada', 'cancelada'], 'entregada' => ['en_uso', 'para_recoger'], 'en_uso' => ['para_recoger'], 'para_recoger' => ['recogida'], 'recogida' => ['finalizada'], 'rechazada' => [], 'finalizada' => [], 'cancelada' => []];
+    }
+
+    private function participants(ToolRequest $request)
+    {
+        return collect([$request->driver, $request->technician])->filter()->unique('id')->values();
+    }
+
+    private function statusLabel(string $status): string
+    {
+        return [
+            'pendiente' => 'pendiente',
+            'aceptada' => 'aceptada',
+            'rechazada' => 'rechazada',
+            'en_camino' => 'en camino',
+            'entregada' => 'entregada',
+            'en_uso' => 'en uso',
+            'para_recoger' => 'para recoger',
+            'recogida' => 'recogida',
+            'finalizada' => 'finalizada',
+            'cancelada' => 'cancelada',
+        ][$status] ?? $status;
     }
 
     private function normalizeItems(array $items): array

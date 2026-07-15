@@ -1,5 +1,6 @@
 <?php
 use App\Http\Controllers\Api\ChatController;
+use App\Http\Controllers\Api\MobileDeviceTokenController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\ToolRequestController;
@@ -18,5 +19,7 @@ Route::middleware(['web','auth'])->group(function () {
     Route::get('/notifications',[NotificationController::class,'index']);
     Route::patch('/notifications/{notification}/read',[NotificationController::class,'read']);
     Route::patch('/notifications/read-all',[NotificationController::class,'readAll']);
+    Route::post('/mobile/device-token',[MobileDeviceTokenController::class,'store']);
+    Route::delete('/mobile/device-token',[MobileDeviceTokenController::class,'destroy']);
     Route::get('/reports/export',[ReportController::class,'export']);
 });

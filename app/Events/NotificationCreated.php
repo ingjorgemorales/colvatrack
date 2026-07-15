@@ -24,13 +24,7 @@ class NotificationCreated implements ShouldBroadcastNow
     private function payload(): array
     {
         return array_merge($this->notification->toArray(), [
-            'url' => match ($this->notification->type) {
-                'tool_request', 'tool_request_status', 'chat' => $this->notification->data_json ? '/solicitudes/'.$this->notification->data_json['tool_request_id'] : null,
-                'gps_stale_summary' => '/mapa',
-                'request_delay_summary' => '/solicitudes',
-                'low_stock_summary' => '/inventario',
-                default => null,
-            },
+            'url' => $this->notification->url(),
         ]);
     }
 }
