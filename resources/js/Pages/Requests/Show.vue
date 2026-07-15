@@ -290,7 +290,6 @@ onBeforeUnmount(() => { if(window.Echo && channelName) window.Echo.leave(channel
       <aside class="space-y-5">
         <section class="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
           <h2 class="mb-4 flex items-center gap-2 font-semibold text-[#123f6e]"><Truck class="h-5 w-5" /> Acciones del flujo</h2>
-          <textarea v-model="commentForm.comment" class="mb-3 w-full rounded-md border border-slate-300 px-3 py-3" placeholder="Comentario opcional"></textarea>
           <div class="grid gap-2">
             <button v-for="status in allowed" :key="status" @click="change(status)" class="cursor-pointer rounded-md px-4 py-3 font-semibold text-white transition-colors" :class="['rechazada','cancelada'].includes(status) ? 'bg-red-700 hover:bg-red-800' : 'bg-[#123f6e] hover:bg-[#0e2d52]'">{{ actionLabel(status) }}</button>
             <p v-if="!allowed.length" class="rounded-md bg-slate-50 p-3 text-sm text-slate-500">No tienes acciones pendientes para este estado.</p>

@@ -34,8 +34,20 @@ class InventoryController extends Controller
             'filters' => ['search' => $search, 'tool_id' => $toolId, 'per_page' => $perPage],
             'categories' => InventoryCategory::orderBy('name')->get(),
             'items' => InventoryItem::with('category')->withSum('vehicleInventories', 'quantity_total')->where('status', 'active')->orderBy('name')->get(),
-            'movements' => InventoryMovement::with(['vehicle','item'])->latest('created_at')->limit(25)->get(),
             'canManageCatalog' => $user->hasRole('Administrador'),
+        ]);
+    }
+
+    public function movements(Request $request)
+    {
+        $perPage = min((int) $request->get('per_page', 15), 100);
+
+        return Inertia::render('Inventory/Movements', [
+            'movements' => InventoryMovement::with(['vehicle','item','creator'])
+                ->latest('created_at')
+                ->paginate($perPage)
+                ->withQueryString(),
+            'filters' => ['per_page' => $perPage],
         ]);
     }
 

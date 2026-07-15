@@ -42,6 +42,7 @@ Route::middleware(['auth', 'must.change.password', 'audit'])->group(function () 
     Route::patch('/perfil/password', [ProfileController::class, 'password'])->name('perfil.password')->middleware('permission:perfil,editar');
 
     Route::get('/inventario', [InventoryController::class, 'index'])->name('inventario.index')->middleware('permission:inventario,ver');
+    Route::get('/inventario/movimientos', [InventoryController::class, 'movements'])->name('inventario.movimientos')->middleware('permission:inventario,ver');
     Route::post('/inventario/items', [InventoryController::class, 'storeItem'])->name('inventario.items.store')->middleware('role:Administrador');
     Route::patch('/inventario/items/{item}', [InventoryController::class, 'updateItem'])->name('inventario.items.update')->middleware('role:Administrador');
     Route::patch('/inventario/items/{item}/status', [InventoryController::class, 'toggleItemStatus'])->name('inventario.items.status')->middleware('role:Administrador');
@@ -70,5 +71,4 @@ Route::middleware(['auth', 'must.change.password', 'audit'])->group(function () 
     Route::patch('/notificaciones/{notification}/read', [NotificationWebController::class, 'read'])->name('notificaciones.read')->middleware('permission:notificaciones,editar');
     Route::patch('/notificaciones/read-all', [NotificationWebController::class, 'readAll'])->name('notificaciones.read-all')->middleware('permission:notificaciones,editar');
 });
-
 
