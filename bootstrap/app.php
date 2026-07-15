@@ -21,6 +21,10 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [NoCache::class, HandleInertiaRequests::class]);
+        $middleware->validateCsrfTokens(except: [
+            'api/users/location',
+            'api/mobile/device-token',
+        ]);
         $middleware->alias([
             'audit' => AuditImportantAction::class,
             'role' => CheckRole::class,
@@ -32,4 +36,3 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions): void {
         //
     })->create();
-

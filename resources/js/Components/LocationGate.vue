@@ -60,7 +60,9 @@ async function sendPosition(position) {
     } catch (error) {
         active.value = false;
         status.value = 'unavailable';
-        message.value = error.response?.data?.message ?? 'No fue posible guardar tu ubicacion.';
+        message.value = error.response?.status === 419
+            ? 'Tu sesion necesita actualizarse. Presiona Revisar e intenta de nuevo.'
+            : error.response?.data?.message ?? 'No fue posible guardar tu ubicacion.';
         showNotice.value = true;
     } finally {
         sending.value = false;
