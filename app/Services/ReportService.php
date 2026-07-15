@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\AuditLog;
 use App\Models\InventoryItem;
 use App\Models\InventoryMovement;
+use App\Models\Notification;
 use App\Models\ToolRequest;
 use App\Models\ToolRequestStatusHistory;
 use App\Models\User;
@@ -29,6 +30,7 @@ class ReportService
             ['key' => 'inventory', 'name' => 'Inventario', 'description' => 'Stock por vehiculo, herramienta y categoria.'],
             ['key' => 'movements', 'name' => 'Movimientos', 'description' => 'Movimientos de inventario y saldos.'],
             ['key' => 'gps_traces', 'name' => 'Trazas GPS', 'description' => 'Historial de posiciones GPS por vehiculo.'],
+            ['key' => 'notifications', 'name' => 'Notificaciones', 'description' => 'Registro de notificaciones por usuario, tipo y estado de lectura.'],
             ['key' => 'audit', 'name' => 'Auditoria', 'description' => 'Acciones registradas por usuario, modulo e IP.'],
             ['key' => 'activity', 'name' => 'Actividad', 'description' => 'Historial de cambios de estado de solicitudes.'],
         ];
@@ -61,6 +63,7 @@ class ReportService
             'inventory' => $this->inventory($filters),
             'movements' => $this->movements($filters),
             'gps_traces' => $this->gpsTraces($filters),
+            'notifications' => $this->notifications($filters),
             'audit' => $this->audit($filters),
             'activity' => $this->activity($filters),
             default => abort(404, 'Reporte no encontrado.'),
@@ -267,6 +270,32 @@ class ReportService
             $log->module,
             $log->description,
             $log->ip_address,
+        ])->all();
+
+        return [$headings, $rows];
+    }
+
+    private function notifications(array $filters): array
+    {
+        $query = Notification::with('user')
+            ->when($filters['user_id'] ?? null, fn (Builder $q, $id) => $q->where('user_id', $id))
+            ->when($filters['status'] ?? null, fn (Builder $q, $type) => $q->where('type', $type))
+            ->when(($filters['read_status'] ?? null) === 'read', fn (Builder $q) => $q->whereNotNull('read_at'))
+            ->when(($filters['read_status'] ?? null) === 'unread', fn (Builder $q) => $q->whereNull('read_at'))
+            ->latest('created_at');
+        $this->dateRange($query, $filters, 'created_at');
+
+        $headings = ['Fecha', 'Usuario', 'Email', 'Tipo', 'Titulo', 'Mensaje', 'Estado lectura', 'Leida en', 'Datos'];
+        $rows = $query->get()->map(fn (Notification $notification) => [
+            $this->date($notification->created_at),
+            trim($notification->user?->name.' '.$notification->user?->last_name),
+            $notification->user?->email,
+            $notification->type,
+            $notification->title,
+            $notification->message,
+            $notification->read_at ? 'leida' : 'no leida',
+            $this->date($notification->read_at),
+            $notification->data_json ? json_encode($notification->data_json, JSON_UNESCAPED_UNICODE) : null,
         ])->all();
 
         return [$headings, $rows];

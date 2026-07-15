@@ -13,6 +13,7 @@ const form = reactive({
   user_id: props.filters?.user_id || '',
   category_id: props.filters?.category_id || '',
   status: props.filters?.status || '',
+  read_status: props.filters?.read_status || '',
 });
 
 const currentReport = computed(() => props.reports.find((report) => report.key === form.type) || props.reports[0]);
@@ -26,6 +27,7 @@ const statusFilters = {
   movements: { label: 'Tipo de movimiento', options: ['stock_update', 'reserved', 'released', 'delivered', 'returned'] },
   audit: { label: 'Modulo', options: ['dashboard', 'mapa', 'solicitudes', 'chat', 'notificaciones', 'inventario', 'vehiculos', 'reportes', 'usuarios', 'roles', 'auditoria', 'perfil', 'configuracion_gps'] },
   activity: { label: 'Estado nuevo', options: ['pendiente', 'aceptada', 'rechazada', 'vencida', 'en_camino', 'entregada', 'en_uso', 'para_recoger', 'recogida', 'finalizada', 'cancelada'] },
+  notifications: { label: 'Tipo', options: ['info', 'tool_request', 'tool_request_status', 'chat', 'gps_stale_summary', 'request_delay_summary', 'low_stock_summary'] },
 };
 const statusFilter = computed(() => statusFilters[form.type] ?? null);
 const exportUrl = computed(() => {
@@ -35,6 +37,7 @@ const exportUrl = computed(() => {
 });
 watch(() => form.type, () => {
   if (!statusFilter.value?.options.includes(form.status)) form.status = '';
+  if (form.type !== 'notifications') form.read_status = '';
 }, { immediate: true });
 </script>
 
@@ -57,6 +60,7 @@ watch(() => form.type, () => {
           <div><label class="block text-sm font-medium text-slate-700">Usuario</label><select v-model="form.user_id" class="w-full rounded-md border border-slate-300 px-3 py-3"><option value="">Todos</option><option v-for="user in users" :key="user.id" :value="user.id">{{ user.name }} {{ user.last_name }} - {{ user.role?.name }}</option></select></div>
           <div><label class="block text-sm font-medium text-slate-700">Categoria</label><select v-model="form.category_id" class="w-full rounded-md border border-slate-300 px-3 py-3"><option value="">Todas</option><option v-for="category in categories" :key="category.id" :value="category.id">{{ category.name }}</option></select></div>
           <div v-if="statusFilter"><label class="block text-sm font-medium text-slate-700">{{ statusFilter.label }}</label><select v-model="form.status" class="w-full rounded-md border border-slate-300 px-3 py-3"><option value="">Todos</option><option v-for="status in statusFilter.options" :key="status" :value="status">{{ status }}</option></select></div>
+          <div v-if="form.type === 'notifications'"><label class="block text-sm font-medium text-slate-700">Lectura</label><select v-model="form.read_status" class="w-full rounded-md border border-slate-300 px-3 py-3"><option value="">Todas</option><option value="unread">No leidas</option><option value="read">Leidas</option></select></div>
           <a :href="exportUrl" class="flex w-full items-center justify-center gap-2 rounded-md bg-[#123f6e] px-4 py-3 font-semibold text-white"><Download class="h-5 w-5" /> Exportar XLSX</a>
         </div>
       </aside>

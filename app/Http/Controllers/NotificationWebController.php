@@ -10,9 +10,43 @@ class NotificationWebController extends Controller
     public function index(Request $request)
     {
         $perPage = min((int) $request->integer('per_page', 10), 100);
+        $query = Notification::where('user_id', auth()->id());
+
+        if ($request->filled('search')) {
+            $search = $request->string('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%$search%")
+                    ->orWhere('message', 'like', "%$search%")
+                    ->orWhere('type', 'like', "%$search%");
+            });
+        }
+
+        if ($request->filled('type')) {
+            $query->where('type', $request->string('type'));
+        }
+
+        $readStatus = (string) $request->string('read_status');
+
+        if ($readStatus === 'read') {
+            $query->whereNotNull('read_at');
+        }
+
+        if ($readStatus === 'unread') {
+            $query->whereNull('read_at');
+        }
+
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date('date_from'));
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date('date_to'));
+        }
+
         return Inertia::render('Notifications/Index', [
-            'notifications' => Notification::where('user_id', auth()->id())->latest()->paginate($perPage)->withQueryString(),
-            'filters' => ['per_page' => $perPage],
+            'notifications' => $query->latest()->paginate($perPage)->withQueryString(),
+            'types' => Notification::where('user_id', auth()->id())->select('type')->distinct()->orderBy('type')->pluck('type'),
+            'filters' => $request->only(['search', 'type', 'read_status', 'date_from', 'date_to', 'per_page']) + ['per_page' => $perPage],
         ]);
     }
 

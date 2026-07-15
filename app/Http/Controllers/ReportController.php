@@ -16,7 +16,7 @@ class ReportController extends Controller
     {
         return Inertia::render('Reports/Index', [
             'reports' => $reports->catalog(),
-            'filters' => $request->only(['type', 'date_from', 'date_to', 'vehicle_id', 'user_id', 'category_id', 'status']),
+            'filters' => $request->only(['type', 'date_from', 'date_to', 'vehicle_id', 'user_id', 'category_id', 'status', 'read_status']),
             'vehicles' => Vehicle::orderBy('plate')->get(['id', 'plate']),
             'users' => User::with('role')->orderBy('name')->get(['id', 'role_id', 'name', 'last_name', 'email']),
             'categories' => InventoryCategory::orderBy('name')->get(['id', 'name']),
@@ -26,7 +26,7 @@ class ReportController extends Controller
     public function export(Request $request, ReportService $reports)
     {
         $type = $request->query('type', 'vehicles');
-        $filters = $request->only(['date_from', 'date_to', 'vehicle_id', 'user_id', 'category_id', 'status']);
+        $filters = $request->only(['date_from', 'date_to', 'vehicle_id', 'user_id', 'category_id', 'status', 'read_status']);
 
         AuditLog::create([
             'user_id' => $request->user()?->id,
