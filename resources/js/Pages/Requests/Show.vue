@@ -64,6 +64,7 @@ const statusClasses = {
   vencida: 'bg-orange-100 text-orange-900 border-orange-200',
   cancelada: 'bg-red-50 text-red-800 border-red-200',
 };
+const activeRouteStatuses = ['pendiente', 'aceptada', 'en_camino', 'entregada', 'en_uso', 'para_recoger', 'recogida'];
 const timeline = computed(() => [
   ['requested_at', 'Solicitada'],
   ['accepted_at', 'Aceptada'],
@@ -77,17 +78,36 @@ const currentStatusClass = computed(() => statusClasses[props.request.status] ??
 const hasVehicleRouteLocation = computed(() => Boolean(props.request.vehicle?.current_latitude && props.request.vehicle?.current_longitude));
 const vehicleRouteName = computed(() => props.request.vehicle?.plate ? `Vehiculo ${props.request.vehicle.plate}` : 'Vehiculo asignado');
 const isFinalized = computed(() => props.request.status === 'finalizada');
+const isActiveRequest = computed(() => activeRouteStatuses.includes(props.request.status));
+const isClosedWithoutHistoricalRoute = computed(() => ['vencida', 'cancelada', 'rechazada'].includes(props.request.status));
 const routePoints = computed(() => props.routeLocations
   .filter(location => location.latitude && location.longitude)
   .map(location => ({ ...location, lat: Number(location.latitude), lng: Number(location.longitude) }))
 );
 const hasHistoricalRoute = computed(() => routePoints.value.length >= 2);
-const canOpenRouteMap = computed(() => isFinalized.value ? hasHistoricalRoute.value : Boolean(hasVehicleRouteLocation.value && props.request.technician_latitude && props.request.technician_longitude));
-const routeButtonText = computed(() => isFinalized.value ? 'Ver historial del trayecto' : 'Ver ruta en mapa');
+const canOpenRouteMap = computed(() => {
+  if (isFinalized.value) return hasHistoricalRoute.value;
+  if (isActiveRequest.value) return Boolean(hasVehicleRouteLocation.value && props.request.technician_latitude && props.request.technician_longitude);
+  return false;
+});
+const routeSectionTitle = computed(() => {
+  if (isFinalized.value) return 'Historial del trayecto';
+  if (props.request.status === 'vencida') return 'Solicitud vencida';
+  if (isClosedWithoutHistoricalRoute.value) return 'Solicitud cerrada';
+  return 'Ubicacion del tecnico';
+});
+const routeButtonText = computed(() => {
+  if (isFinalized.value) return 'Ver historial del trayecto';
+  if (isActiveRequest.value) return 'Ver ruta en mapa';
+  return 'Ruta no disponible';
+});
 const routeModalTitle = computed(() => isFinalized.value ? 'Historial del trayecto' : 'Ruta hacia el tecnico');
 const routeUnavailableText = computed(() => {
+  if (props.request.status === 'vencida') return 'Esta solicitud vencio porque no fue aceptada a tiempo. La ruta en tiempo real ya no esta disponible.';
+  if (props.request.status === 'cancelada') return 'Esta solicitud fue cancelada. La ruta en tiempo real ya no esta disponible.';
+  if (props.request.status === 'rechazada') return 'Esta solicitud fue rechazada. La ruta en tiempo real ya no esta disponible.';
   if (isFinalized.value && !hasHistoricalRoute.value) return 'No hay suficientes puntos GPS guardados para mostrar el historial del trayecto.';
-  if (!isFinalized.value && !hasVehicleRouteLocation.value) return 'El vehiculo asignado no tiene ubicacion GPS disponible.';
+  if (isActiveRequest.value && !hasVehicleRouteLocation.value) return 'El vehiculo asignado no tiene ubicacion GPS disponible.';
   return '';
 });
 const contactActions = computed(() => {
@@ -418,11 +438,11 @@ onBeforeUnmount(() => { if(window.Echo && channelName) window.Echo.leave(channel
         </section>
 
         <section v-if="request.technician_latitude && request.technician_longitude" class="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 class="mb-4 flex items-center gap-2 font-semibold text-[#123f6e]"><MapPin class="h-5 w-5" /> {{ isFinalized ? 'Historial del trayecto' : 'Ubicacion del tecnico' }}</h2>
+          <h2 class="mb-4 flex items-center gap-2 font-semibold text-[#123f6e]"><MapPin class="h-5 w-5" /> {{ routeSectionTitle }}</h2>
           <p class="mb-3 text-sm text-slate-600">{{ request.technician_address ?? 'Direccion no registrada' }}</p>
           <p v-if="routeUnavailableText" class="mb-3 rounded-md bg-amber-50 p-3 text-sm text-amber-800">{{ routeUnavailableText }}</p>
           <p v-else-if="isFinalized" class="mb-3 rounded-md bg-emerald-50 p-3 text-sm text-emerald-800">Esta solicitud ya finalizo. El mapa mostrara el recorrido guardado durante el trayecto.</p>
-          <p v-else class="mb-3 rounded-md bg-blue-50 p-3 text-sm text-blue-800">Esta solicitud sigue activa. El mapa usara la ubicacion actual del vehiculo.</p>
+          <p v-else-if="isActiveRequest" class="mb-3 rounded-md bg-blue-50 p-3 text-sm text-blue-800">Esta solicitud sigue activa. El mapa usara la ubicacion actual del vehiculo.</p>
           <button :disabled="!canOpenRouteMap" @click="openRouteMap" class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-md bg-[#123f6e] px-4 py-3 font-semibold text-white transition-colors hover:bg-[#0e2d52] disabled:cursor-not-allowed disabled:opacity-60">
             <MapPin class="h-4 w-4" /> {{ routeButtonText }}
           </button>

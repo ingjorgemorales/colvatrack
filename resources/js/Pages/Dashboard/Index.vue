@@ -1,7 +1,8 @@
 <script setup>
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { Bell, Car, CheckCircle, ClipboardList, Clock3, MapPin, MessageCircle, PackageCheck, Users } from '@lucide/vue';
+import { onBeforeUnmount, onMounted } from 'vue';
 const props = defineProps({ stats: Array, recentRequests: Array, role: String, notifications: Array });
 const icons = { Bell, Car, CheckCircle, ClipboardList, Clock3, MapPin, MessageCircle, PackageCheck, Users };
 const statusLabels = { pendiente:'Pendiente', aceptada:'Aceptada', rechazada:'Rechazada', vencida:'Vencida', en_camino:'En camino', entregada:'Entregada', en_uso:'En uso', recogida:'Recogida', finalizada:'Finalizada', cancelada:'Cancelada' };
@@ -17,6 +18,41 @@ const iconColors = {
   Bell: 'bg-rose-100 text-rose-700',
   Users: 'bg-slate-100 text-slate-700',
 };
+let dashboardRefreshTimer = null;
+let dashboardChannelName = null;
+let refreshingDashboard = false;
+
+function refreshDashboard() {
+  if (refreshingDashboard) return;
+
+  refreshingDashboard = true;
+  router.reload({
+    only: ['stats', 'recentRequests', 'notifications'],
+    preserveScroll: true,
+    preserveState: true,
+    onFinish: () => {
+      refreshingDashboard = false;
+    },
+  });
+}
+
+onMounted(() => {
+  if (window.Echo) {
+    dashboardChannelName = 'tool-requests';
+    window.Echo.channel(dashboardChannelName)
+      .listen('ToolRequestCreated', refreshDashboard)
+      .listen('ToolRequestStatusChanged', refreshDashboard);
+  }
+
+  window.addEventListener('notifications:sync', refreshDashboard);
+  dashboardRefreshTimer = window.setInterval(refreshDashboard, 15000);
+});
+
+onBeforeUnmount(() => {
+  if (window.Echo && dashboardChannelName) window.Echo.leave(dashboardChannelName);
+  if (dashboardRefreshTimer) window.clearInterval(dashboardRefreshTimer);
+  window.removeEventListener('notifications:sync', refreshDashboard);
+});
 </script>
 <template>
   <Head title="Dashboard" />
