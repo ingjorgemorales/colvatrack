@@ -21,6 +21,11 @@ class ToolRequestService
         unset($data['items']);
 
         return DB::transaction(function () use ($data, $items) {
+            $activeTechnicianRequest = ToolRequest::where('technician_id', $data['technician_id'])->activeForTechnician()->lockForUpdate()->first();
+            if ($activeTechnicianRequest) {
+                throw new InvalidArgumentException('Ya tienes una solicitud activa (#'.$activeTechnicianRequest->id.') en estado '.$activeTechnicianRequest->status.'. Finalizala antes de crear una nueva solicitud.');
+            }
+
             $vehicle = Vehicle::whereKey($data['vehicle_id'])->lockForUpdate()->firstOrFail();
             $activeRequest = ToolRequest::where('vehicle_id', $vehicle->id)->activeForVehicle()->lockForUpdate()->first();
             if ($activeRequest) {

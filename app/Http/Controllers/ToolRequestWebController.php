@@ -34,6 +34,9 @@ class ToolRequestWebController extends Controller
             'requests' => $query->paginate($perPage)->withQueryString(),
             'role' => $user->role?->name,
             'filters' => $request->only('search','status','priority','per_page'),
+            'activeTechnicianRequest' => $user->hasRole('Tecnico')
+                ? ToolRequest::with('vehicle')->where('technician_id', $user->id)->activeForTechnician()->latest()->first()
+                : null,
         ]);
     }
     public function create(Request $request)
@@ -41,6 +44,10 @@ class ToolRequestWebController extends Controller
         abort_unless($request->user()->hasRole('Tecnico', 'Administrador'), 403);
 
         $user = $request->user();
+        $activeTechnicianRequest = $user->hasRole('Tecnico')
+            ? ToolRequest::with('vehicle')->where('technician_id', $user->id)->activeForTechnician()->latest()->first()
+            : null;
+
         $userLocation = [
             'latitude' => $user->current_latitude,
             'longitude' => $user->current_longitude,
@@ -69,6 +76,7 @@ class ToolRequestWebController extends Controller
             'vehicles' => $vehicles,
             'selectedVehicleId' => $request->integer('vehicle_id') ?: null,
             'userLocation' => $userLocation,
+            'activeTechnicianRequest' => $activeTechnicianRequest,
         ]);
     }
 
