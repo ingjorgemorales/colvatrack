@@ -31,6 +31,7 @@ const labels = {
   pendiente: 'Pendiente',
   aceptada: 'Aceptada',
   rechazada: 'Rechazada',
+  vencida: 'Vencida',
   en_camino: 'En camino',
   entregada: 'Entregada',
   en_uso: 'En uso',
@@ -60,6 +61,7 @@ const statusClasses = {
   recogida: 'bg-slate-100 text-slate-800 border-slate-200',
   finalizada: 'bg-emerald-100 text-emerald-900 border-emerald-200',
   rechazada: 'bg-red-50 text-red-800 border-red-200',
+  vencida: 'bg-orange-100 text-orange-900 border-orange-200',
   cancelada: 'bg-red-50 text-red-800 border-red-200',
 };
 const timeline = computed(() => [

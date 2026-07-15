@@ -10,3 +10,4 @@ Artisan::command('inspire', function () {
 
 Schedule::command('gps:sync-last-positions')->everySecond()->withoutOverlapping();
 Schedule::command('alerts:operational')->everyTenMinutes()->withoutOverlapping();
+Schedule::command('requests:expire-pending --minutes=30')->everyMinute()->withoutOverlapping();

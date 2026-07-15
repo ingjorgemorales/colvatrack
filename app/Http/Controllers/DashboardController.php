@@ -19,6 +19,7 @@ class DashboardController extends Controller
         if ($user->hasRole('Tecnico')) {
             $stats = [
                 ['label' => 'Mis pendientes', 'value' => ToolRequest::where('technician_id', $user->id)->where('status', 'pendiente')->count(), 'icon' => 'ClipboardList', 'route' => '/solicitudes?status=pendiente'],
+                ['label' => 'Solicitudes vencidas', 'value' => ToolRequest::where('technician_id', $user->id)->where('status', 'vencida')->count(), 'icon' => 'Clock3', 'route' => '/solicitudes?status=vencida'],
                 ['label' => 'Aceptadas', 'value' => ToolRequest::where('technician_id', $user->id)->where('status', 'aceptada')->count(), 'icon' => 'CheckCircle', 'route' => '/solicitudes?status=aceptada'],
                 ['label' => 'En curso', 'value' => ToolRequest::where('technician_id', $user->id)->whereIn('status', ['en_camino','entregada','en_uso'])->count(), 'icon' => 'MapPin', 'route' => '/solicitudes'],
                 ['label' => 'Finalizadas', 'value' => ToolRequest::where('technician_id', $user->id)->where('status', 'finalizada')->count(), 'icon' => 'PackageCheck', 'route' => '/solicitudes?status=finalizada'],
@@ -30,6 +31,7 @@ class DashboardController extends Controller
             $stats = [
                 ['label' => 'Recibidas', 'value' => ToolRequest::where('driver_id', $user->id)->count(), 'icon' => 'ClipboardList', 'route' => '/solicitudes'],
                 ['label' => 'Pendientes', 'value' => ToolRequest::where('driver_id', $user->id)->where('status', 'pendiente')->count(), 'icon' => 'Bell', 'route' => '/solicitudes?status=pendiente'],
+                ['label' => 'Solicitudes vencidas', 'value' => ToolRequest::where('driver_id', $user->id)->where('status', 'vencida')->count(), 'icon' => 'Clock3', 'route' => '/solicitudes?status=vencida'],
                 ['label' => 'Aceptadas', 'value' => ToolRequest::where('driver_id', $user->id)->where('status', 'aceptada')->count(), 'icon' => 'CheckCircle', 'route' => '/solicitudes?status=aceptada'],
                 ['label' => 'En camino', 'value' => ToolRequest::where('driver_id', $user->id)->where('status', 'en_camino')->count(), 'icon' => 'MapPin', 'route' => '/solicitudes?status=en_camino'],
                 ['label' => 'Entregas pendientes', 'value' => ToolRequest::where('driver_id', $user->id)->whereIn('status', ['aceptada','en_camino'])->count(), 'icon' => 'PackageCheck', 'route' => '/solicitudes'],
@@ -43,6 +45,7 @@ class DashboardController extends Controller
                 ['label' => 'En movimiento', 'value' => Vehicle::where('current_speed','>',0)->count(), 'icon' => 'MapPin', 'route' => '/vehiculos'],
                 ['label' => 'Total usuarios', 'value' => User::count(), 'icon' => 'Users', 'route' => '/usuarios'],
                 ['label' => 'Solicitudes pendientes', 'value' => ToolRequest::where('status','pendiente')->count(), 'icon' => 'ClipboardList', 'route' => '/solicitudes?status=pendiente'],
+                ['label' => 'Solicitudes vencidas', 'value' => ToolRequest::where('status','vencida')->count(), 'icon' => 'Clock3', 'route' => '/solicitudes?status=vencida'],
                 ['label' => 'Herramientas registradas', 'value' => InventoryItem::where('status', 'active')->count(), 'icon' => 'PackageCheck', 'route' => '/inventario'],
             ];
             $recentRequests = ToolRequest::with(['vehicle','technician','driver'])->latest()->limit(8)->get();

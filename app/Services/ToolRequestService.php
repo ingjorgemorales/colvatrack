@@ -18,12 +18,15 @@ class ToolRequestService
     public function create(array $data): ToolRequest
     {
         $items = $this->normalizeItems($data['items'] ?? []);
-        unset($data['items']);
+        $enforceSingleActiveTechnician = (bool) ($data['enforce_single_active_technician'] ?? true);
+        unset($data['items'], $data['enforce_single_active_technician']);
 
-        return DB::transaction(function () use ($data, $items) {
-            $activeTechnicianRequest = ToolRequest::where('technician_id', $data['technician_id'])->activeForTechnician()->lockForUpdate()->first();
-            if ($activeTechnicianRequest) {
-                throw new InvalidArgumentException('Ya tienes una solicitud activa (#'.$activeTechnicianRequest->id.') en estado '.$activeTechnicianRequest->status.'. Finalizala antes de crear una nueva solicitud.');
+        return DB::transaction(function () use ($data, $items, $enforceSingleActiveTechnician) {
+            if ($enforceSingleActiveTechnician) {
+                $activeTechnicianRequest = ToolRequest::where('technician_id', $data['technician_id'])->activeForTechnician()->lockForUpdate()->first();
+                if ($activeTechnicianRequest) {
+                    throw new InvalidArgumentException('Ya tienes una solicitud activa (#'.$activeTechnicianRequest->id.') en estado '.$activeTechnicianRequest->status.'. Finalizala antes de crear una nueva solicitud.');
+                }
             }
 
             $vehicle = Vehicle::whereKey($data['vehicle_id'])->lockForUpdate()->firstOrFail();
@@ -103,6 +106,68 @@ class ToolRequestService
         });
     }
 
+    public function expirePendingOlderThan(int $minutes = 30): int
+    {
+        $ids = ToolRequest::where('status', 'pendiente')
+            ->where('requested_at', '<=', now()->subMinutes($minutes))
+            ->pluck('id');
+
+        $expired = 0;
+
+        foreach ($ids as $id) {
+            if ($this->expirePendingRequest((int) $id, $minutes)) {
+                $expired++;
+            }
+        }
+
+        return $expired;
+    }
+
+    public function expirePendingRequest(int $requestId, int $minutes = 30): ?ToolRequest
+    {
+        return DB::transaction(function () use ($requestId, $minutes) {
+            $request = ToolRequest::whereKey($requestId)->lockForUpdate()->first();
+
+            if (! $request || $request->status !== 'pendiente') {
+                return null;
+            }
+
+            $requestedAt = $request->requested_at ?? $request->created_at;
+            if (! $requestedAt || $requestedAt->gt(now()->subMinutes($minutes))) {
+                return null;
+            }
+
+            $request->loadMissing('items', 'technician', 'driver', 'vehicle');
+
+            foreach ($request->items as $item) {
+                $this->inventory->releaseReserved($request->vehicle_id, $item->inventory_item_id, $item->quantity, $request->id, 'Solicitud vencida por tiempo de aceptacion');
+                $item->update(['status' => 'released']);
+            }
+
+            $request->update(['status' => 'vencida']);
+            $request->histories()->create([
+                'old_status' => 'pendiente',
+                'new_status' => 'vencida',
+                'changed_by' => $request->technician_id,
+                'comment' => 'Solicitud vencida automaticamente por superar '.$minutes.' minutos sin aceptacion del conductor.',
+                'created_at' => now(),
+            ]);
+
+            $request = $request->fresh(['items.item','histories.user','vehicle','technician','driver']);
+            $title = 'Solicitud vencida';
+            $message = 'La solicitud #'.$request->id.' del vehiculo '.$request->vehicle?->plate.' vencio porque no fue aceptada en '.$minutes.' minutos.';
+
+            foreach ($this->participants($request) as $participant) {
+                $this->notifications->create($participant->id, $title, $message, 'tool_request_status', ['tool_request_id' => $request->id, 'old_status' => 'pendiente', 'new_status' => 'vencida']);
+                $this->mail->sendPlain($participant->email, $title.' en ColvaTrack', $message);
+            }
+
+            try { broadcast(new ToolRequestStatusChanged($request))->toOthers(); } catch (\Throwable $e) { /* WebSocket no disponible */ }
+
+            return $request;
+        });
+    }
+
     public function allowedTransitionsFor(ToolRequest $request, User $user): array
     {
         $request->loadMissing('technician', 'driver');
@@ -149,7 +214,7 @@ class ToolRequestService
 
     private function transitions(): array
     {
-        return ['pendiente' => ['aceptada', 'rechazada', 'cancelada'], 'aceptada' => ['en_camino', 'cancelada'], 'en_camino' => ['entregada', 'cancelada'], 'entregada' => ['en_uso', 'para_recoger'], 'en_uso' => ['para_recoger'], 'para_recoger' => ['recogida'], 'recogida' => ['finalizada'], 'rechazada' => [], 'finalizada' => [], 'cancelada' => []];
+        return ['pendiente' => ['aceptada', 'rechazada', 'cancelada', 'vencida'], 'aceptada' => ['en_camino', 'cancelada'], 'en_camino' => ['entregada', 'cancelada'], 'entregada' => ['en_uso', 'para_recoger'], 'en_uso' => ['para_recoger'], 'para_recoger' => ['recogida'], 'recogida' => ['finalizada'], 'rechazada' => [], 'vencida' => [], 'finalizada' => [], 'cancelada' => []];
     }
 
     private function participants(ToolRequest $request)
@@ -163,6 +228,7 @@ class ToolRequestService
             'pendiente' => 'pendiente',
             'aceptada' => 'aceptada',
             'rechazada' => 'rechazada',
+            'vencida' => 'vencida',
             'en_camino' => 'en camino',
             'entregada' => 'entregada',
             'en_uso' => 'en uso',

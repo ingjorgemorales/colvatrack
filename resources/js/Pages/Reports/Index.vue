@@ -21,11 +21,11 @@ const statusFilters = {
   users: { label: 'Estado', options: ['active', 'inactive'] },
   technicians: { label: 'Estado', options: ['active', 'inactive'] },
   drivers: { label: 'Estado', options: ['active', 'inactive'] },
-  requests: { label: 'Estado', options: ['pendiente', 'aceptada', 'rechazada', 'en_camino', 'entregada', 'en_uso', 'para_recoger', 'recogida', 'finalizada', 'cancelada'] },
+  requests: { label: 'Estado', options: ['pendiente', 'aceptada', 'rechazada', 'vencida', 'en_camino', 'entregada', 'en_uso', 'para_recoger', 'recogida', 'finalizada', 'cancelada'] },
   inventory: { label: 'Estado herramienta', options: ['active', 'inactive'] },
   movements: { label: 'Tipo de movimiento', options: ['stock_update', 'reserved', 'released', 'delivered', 'returned'] },
   audit: { label: 'Modulo', options: ['dashboard', 'mapa', 'solicitudes', 'chat', 'notificaciones', 'inventario', 'vehiculos', 'reportes', 'usuarios', 'roles', 'auditoria', 'perfil', 'configuracion_gps'] },
-  activity: { label: 'Estado nuevo', options: ['pendiente', 'aceptada', 'rechazada', 'en_camino', 'entregada', 'en_uso', 'para_recoger', 'recogida', 'finalizada', 'cancelada'] },
+  activity: { label: 'Estado nuevo', options: ['pendiente', 'aceptada', 'rechazada', 'vencida', 'en_camino', 'entregada', 'en_uso', 'para_recoger', 'recogida', 'finalizada', 'cancelada'] },
 };
 const statusFilter = computed(() => statusFilters[form.type] ?? null);
 const exportUrl = computed(() => {

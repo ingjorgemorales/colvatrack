@@ -1,13 +1,14 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
-import { Bell, Car, CheckCircle, ClipboardList, MapPin, MessageCircle, PackageCheck, Users } from '@lucide/vue';
+import { Bell, Car, CheckCircle, ClipboardList, Clock3, MapPin, MessageCircle, PackageCheck, Users } from '@lucide/vue';
 const props = defineProps({ stats: Array, recentRequests: Array, role: String, notifications: Array });
-const icons = { Bell, Car, CheckCircle, ClipboardList, MapPin, MessageCircle, PackageCheck, Users };
-const statusLabels = { pendiente:'Pendiente', aceptada:'Aceptada', rechazada:'Rechazada', en_camino:'En camino', entregada:'Entregada', en_uso:'En uso', recogida:'Recogida', finalizada:'Finalizada', cancelada:'Cancelada' };
-const statusClasses = { pendiente:'bg-amber-50 text-amber-800', aceptada:'bg-blue-50 text-blue-800', en_camino:'bg-sky-50 text-sky-800', entregada:'bg-emerald-50 text-emerald-800', en_uso:'bg-indigo-50 text-indigo-800', recogida:'bg-slate-100 text-slate-800', finalizada:'bg-emerald-100 text-emerald-900', rechazada:'bg-red-50 text-red-800', cancelada:'bg-red-50 text-red-800' };
+const icons = { Bell, Car, CheckCircle, ClipboardList, Clock3, MapPin, MessageCircle, PackageCheck, Users };
+const statusLabels = { pendiente:'Pendiente', aceptada:'Aceptada', rechazada:'Rechazada', vencida:'Vencida', en_camino:'En camino', entregada:'Entregada', en_uso:'En uso', recogida:'Recogida', finalizada:'Finalizada', cancelada:'Cancelada' };
+const statusClasses = { pendiente:'bg-amber-50 text-amber-800', aceptada:'bg-blue-50 text-blue-800', en_camino:'bg-sky-50 text-sky-800', entregada:'bg-emerald-50 text-emerald-800', en_uso:'bg-indigo-50 text-indigo-800', recogida:'bg-slate-100 text-slate-800', finalizada:'bg-emerald-100 text-emerald-900', rechazada:'bg-red-50 text-red-800', vencida:'bg-orange-100 text-orange-900', cancelada:'bg-red-50 text-red-800' };
 const iconColors = {
   ClipboardList: 'bg-indigo-100 text-indigo-700',
+  Clock3: 'bg-orange-100 text-orange-700',
   CheckCircle: 'bg-emerald-100 text-emerald-700',
   MapPin: 'bg-sky-100 text-sky-700',
   PackageCheck: 'bg-teal-100 text-teal-700',

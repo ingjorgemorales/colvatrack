@@ -97,6 +97,7 @@ class ToolRequestWebController extends Controller
         $data['technician_id'] = $request->user()->id;
         $data['technician_latitude'] = $request->user()->current_latitude;
         $data['technician_longitude'] = $request->user()->current_longitude;
+        $data['enforce_single_active_technician'] = $request->user()->hasRole('Tecnico');
         try {
             $toolRequest = $service->create($data);
         } catch (InvalidArgumentException $e) {
