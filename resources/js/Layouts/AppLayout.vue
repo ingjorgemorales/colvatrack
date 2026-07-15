@@ -96,7 +96,7 @@ onMounted(() => {
       pushNotification(event.notification);
     });
   }
-  notificationPoll = window.setInterval(syncNotifications, 30000);
+  notificationPoll = window.setInterval(syncNotifications, 7000);
   window.addEventListener('notifications:sync', syncNotifications);
   document.addEventListener('click', closeHandler);
 });

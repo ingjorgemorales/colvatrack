@@ -111,7 +111,7 @@ function mergeMessages(incoming = []) {
   const seen = new Set(messages.value.map((message) => Number(message.id)));
   const freshMessages = incoming.filter((message) => message?.id && !seen.has(Number(message.id)));
 
-  if (!freshMessages.length) return;
+  if (!freshMessages.length) return false;
 
   messages.value = [...messages.value, ...freshMessages].sort((a, b) => {
     const first = new Date(a.created_at ?? 0).getTime();
@@ -119,6 +119,8 @@ function mergeMessages(incoming = []) {
     return first - second;
   });
   scrollChat();
+
+  return true;
 }
 function markChatRead() {
   return window.axios
@@ -131,8 +133,9 @@ async function syncChat() {
 
   try {
     const { data } = await window.axios.get(`/api/tool-requests/${props.request.id}/chat`);
-    mergeMessages(data.messages ?? []);
-    await markChatRead();
+    if (mergeMessages(data.messages ?? [])) {
+      await markChatRead();
+    }
   } catch (error) {
     // Si Reverb o la API tienen un corte temporal, la vista conserva los mensajes ya cargados.
   }
@@ -140,8 +143,9 @@ async function syncChat() {
 function receiveChatMessage(event) {
   if (!event?.message) return;
 
-  mergeMessages([event.message]);
-  markChatRead();
+  if (mergeMessages([event.message])) {
+    markChatRead();
+  }
 }
 async function sendMessage(){
   const text = messageForm.message.trim();
@@ -225,8 +229,8 @@ onMounted(() => {
       if (isCurrentRequestEvent(event)) refreshRequest();
     });
   }
-  refreshTimer = window.setInterval(refreshRequest, 30000);
-  chatPollTimer = window.setInterval(syncChat, 30000);
+  refreshTimer = window.setInterval(refreshRequest, 10000);
+  chatPollTimer = window.setInterval(syncChat, 5000);
 });
 watch(() => props.request.chat?.messages, (incoming) => mergeMessages(incoming ?? []));
 onBeforeUnmount(() => { if(window.Echo && channelName) window.Echo.leave(channelName); if(window.Echo && requestChannelName) window.Echo.leave(requestChannelName); if(refreshTimer) window.clearInterval(refreshTimer); if(chatPollTimer) window.clearInterval(chatPollTimer); closeRouteMap(); });
