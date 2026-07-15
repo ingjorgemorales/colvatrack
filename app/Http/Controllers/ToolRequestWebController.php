@@ -5,6 +5,7 @@ use App\Models\ToolRequest;
 use App\Models\Vehicle;
 use App\Services\ToolRequestService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use InvalidArgumentException;
 
@@ -45,7 +46,11 @@ class ToolRequestWebController extends Controller
             'updated_at' => $user->location_updated_at,
         ];
 
-        $vehicles = Vehicle::with(['driver','inventory.item.category','activeToolRequest.technician'])
+        $activeInventory = fn ($q) => $q
+            ->whereHas('item', fn ($item) => $item->where('status', 'active'))
+            ->with('item.category');
+
+        $vehicles = Vehicle::with(['driver', 'inventory' => $activeInventory, 'activeToolRequest.technician'])
             ->where('status', 'active')
             ->get()
             ->map(function (Vehicle $vehicle) use ($userLocation) {
@@ -75,7 +80,7 @@ class ToolRequestWebController extends Controller
             'technician_address' => ['nullable', 'string'],
             'observation' => ['nullable', 'string'],
             'items' => ['required', 'array', 'min:1'],
-            'items.*.inventory_item_id' => ['required', 'exists:inventory_items,id'],
+            'items.*.inventory_item_id' => ['required', Rule::exists('inventory_items', 'id')->where('status', 'active')],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
         ]);
         $vehicle = Vehicle::findOrFail($data['vehicle_id']);

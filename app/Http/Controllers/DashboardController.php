@@ -43,7 +43,7 @@ class DashboardController extends Controller
                 ['label' => 'En movimiento', 'value' => Vehicle::where('current_speed','>',0)->count(), 'icon' => 'MapPin', 'route' => '/vehiculos'],
                 ['label' => 'Total usuarios', 'value' => User::count(), 'icon' => 'Users', 'route' => '/usuarios'],
                 ['label' => 'Solicitudes pendientes', 'value' => ToolRequest::where('status','pendiente')->count(), 'icon' => 'ClipboardList', 'route' => '/solicitudes?status=pendiente'],
-                ['label' => 'Herramientas registradas', 'value' => InventoryItem::count(), 'icon' => 'PackageCheck', 'route' => '/inventario'],
+                ['label' => 'Herramientas registradas', 'value' => InventoryItem::where('status', 'active')->count(), 'icon' => 'PackageCheck', 'route' => '/inventario'],
             ];
             $recentRequests = ToolRequest::with(['vehicle','technician','driver'])->latest()->limit(8)->get();
         }

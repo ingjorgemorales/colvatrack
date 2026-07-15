@@ -14,7 +14,13 @@ class MapLocationService
     {
         $user = auth()->user();
 
-        $vehicles = Vehicle::with(['driver', 'inventory.item', 'activeToolRequest.technician'])
+        $vehicles = Vehicle::with([
+                'driver',
+                'inventory' => fn ($q) => $q
+                    ->whereHas('item', fn ($item) => $item->where('status', 'active'))
+                    ->with('item'),
+                'activeToolRequest.technician',
+            ])
             ->where('status', 'active')
             ->whereNotNull('current_latitude')
             ->whereNotNull('current_longitude')

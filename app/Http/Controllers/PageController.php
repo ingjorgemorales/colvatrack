@@ -25,7 +25,7 @@ class PageController extends Controller
         $data = match ($module) {
             'solicitudes' => ToolRequest::with(['vehicle', 'technician', 'driver'])->latest()->paginate(20),
             'notificaciones' => Notification::where('user_id', auth()->id())->latest()->paginate(20),
-            'inventario' => InventoryItem::with('category')->paginate(20),
+            'inventario' => InventoryItem::with('category')->where('status', 'active')->paginate(20),
             'vehiculos' => Vehicle::with('driver')->paginate(20),
             'usuarios' => User::with('role', 'assignedVehicle')->paginate(20),
             'roles' => Role::with('permissions')->paginate(20),

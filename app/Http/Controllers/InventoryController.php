@@ -7,6 +7,7 @@ use App\Models\InventoryMovement;
 use App\Models\Vehicle;
 use App\Services\InventoryService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class InventoryController extends Controller
@@ -18,13 +19,19 @@ class InventoryController extends Controller
         $toolId = $request->get('tool_id', '');
         $perPage = min((int) $request->get('per_page', 10), 100);
 
-        $vehicles = Vehicle::with(['driver','inventory.item.category'])
+        $activeInventory = fn ($q) => $q
+            ->whereHas('item', fn ($item) => $item->where('status', 'active'))
+            ->with('item.category');
+
+        $vehicles = Vehicle::with(['driver', 'inventory' => $activeInventory])
             ->when($user->hasRole('Conductor'), fn($q) => $q->where('driver_id', $user->id))
             ->when($search, fn($q) => $q->where(function ($q) use ($search) {
                 $q->where('plate', 'like', "%{$search}%")
                   ->orWhereHas('driver', fn($q) => $q->where('name', 'like', "%{$search}%"));
             }))
-            ->when($toolId, fn($q) => $q->whereHas('inventory', fn($q) => $q->where('inventory_item_id', $toolId)))
+            ->when($toolId, fn($q) => $q->whereHas('inventory', fn($q) => $q
+                ->where('inventory_item_id', $toolId)
+                ->whereHas('item', fn ($item) => $item->where('status', 'active'))))
             ->orderBy('plate')
             ->paginate($perPage)
             ->withQueryString();
@@ -123,7 +130,7 @@ class InventoryController extends Controller
         abort_unless($request->user()->hasRole('Administrador'), 403);
         $data = $request->validate([
             'vehicle_id' => ['required', 'exists:vehicles,id'],
-            'inventory_item_id' => ['required', 'exists:inventory_items,id'],
+            'inventory_item_id' => ['required', Rule::exists('inventory_items', 'id')->where('status', 'active')],
             'quantity_total' => ['required', 'integer', 'min:0'],
             'quantity_available' => ['nullable', 'integer', 'min:0'],
         ]);

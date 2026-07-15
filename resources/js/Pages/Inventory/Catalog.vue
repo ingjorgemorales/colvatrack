@@ -14,6 +14,13 @@ const form = reactive({
 const itemForm = useForm({ category_name: '', name: '', description: '', unit: 'unidad' });
 const editForm = useForm({ name: '', category_name: '', unit: '', description: '' });
 const editingItem = ref(null);
+const unitOptions = [
+  { value: 'unidad', label: 'Unidad', hint: 'Escaleras, medidores, conectores' },
+  { value: 'pieza', label: 'Pieza', hint: 'Repuestos o elementos sueltos' },
+  { value: 'metro', label: 'Metro', hint: 'Cable, fibra optica, coaxial' },
+  { value: 'rollo', label: 'Rollo', hint: 'Cinta, cable o material enrollado' },
+  { value: 'paquete', label: 'Paquete', hint: 'Tornillos, conectores o kits' },
+];
 
 function searchCatalog() {
   router.get('/inventario/catalogo', { ...form, per_page: perPage.value }, { preserveState: true, replace: true });
@@ -56,6 +63,14 @@ function saveNewItem() {
 }
 
 function toggleStatus(item) {
+  if (item.status === 'active') {
+    const confirmed = window.confirm(
+      `Vas a desactivar "${item.name}".\n\nEsto hara que la herramienta deje de aparecer en inventario operativo, mapa y creacion de solicitudes. Tampoco se podra asignar ni reservar hasta que la vuelvas a activar.\n\nLos movimientos y solicitudes historicas conservaran su registro.\n\nQuieres continuar?`
+    );
+
+    if (!confirmed) return;
+  }
+
   useForm({}).patch(`/inventario/items/${item.id}/status`, { preserveScroll: true });
 }
 </script>
@@ -75,7 +90,9 @@ function toggleStatus(item) {
         <form class="grid gap-3 xl:grid-cols-[1fr_1fr_160px_1.5fr_auto]" @submit.prevent="saveNewItem">
           <input v-model="itemForm.category_name" class="rounded-md border border-slate-300 px-3 py-3 text-sm" placeholder="Categoria" />
           <input v-model="itemForm.name" class="rounded-md border border-slate-300 px-3 py-3 text-sm" placeholder="Herramienta" />
-          <input v-model="itemForm.unit" class="rounded-md border border-slate-300 px-3 py-3 text-sm" placeholder="Unidad" />
+          <select v-model="itemForm.unit" class="rounded-md border border-slate-300 px-3 py-3 text-sm">
+            <option v-for="option in unitOptions" :key="option.value" :value="option.value">{{ option.label }} - {{ option.hint }}</option>
+          </select>
           <input v-model="itemForm.description" class="rounded-md border border-slate-300 px-3 py-3 text-sm" placeholder="Descripcion" />
           <button class="cursor-pointer rounded-md bg-[#123f6e] px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#0e2d52]" :disabled="itemForm.processing">
             Guardar
@@ -127,7 +144,9 @@ function toggleStatus(item) {
             <form v-if="editingItem === item.id" class="grid gap-3 lg:grid-cols-[1fr_1fr_130px_1.5fr_auto_auto]" @submit.prevent="saveEdit(item)">
               <input v-model="editForm.name" class="rounded-md border border-slate-300 px-3 py-3 text-sm" placeholder="Nombre" />
               <input v-model="editForm.category_name" class="rounded-md border border-slate-300 px-3 py-3 text-sm" placeholder="Categoria" />
-              <input v-model="editForm.unit" class="rounded-md border border-slate-300 px-3 py-3 text-sm" placeholder="Unidad" />
+              <select v-model="editForm.unit" class="rounded-md border border-slate-300 px-3 py-3 text-sm">
+                <option v-for="option in unitOptions" :key="option.value" :value="option.value">{{ option.label }} - {{ option.hint }}</option>
+              </select>
               <input v-model="editForm.description" class="rounded-md border border-slate-300 px-3 py-3 text-sm" placeholder="Descripcion" />
               <button class="cursor-pointer rounded-md bg-[#123f6e] px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#0e2d52]" :disabled="editForm.processing">Guardar</button>
               <button type="button" class="cursor-pointer rounded-md border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50" @click="cancelEdit">Cancelar</button>

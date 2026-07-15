@@ -7,6 +7,7 @@ use App\Models\Chat;
 use App\Models\ToolRequest;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Models\VehicleInventory;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -29,6 +30,20 @@ class ToolRequestService
             $data['driver_id'] = $data['driver_id'] ?? $vehicle->driver_id;
             $request = ToolRequest::create($data + ['status' => 'pendiente', 'requested_at' => now()]);
             foreach ($items as $item) {
+                $inventoryRow = VehicleInventory::where('vehicle_id', $vehicle->id)
+                    ->where('inventory_item_id', $item['inventory_item_id'])
+                    ->whereHas('item', fn ($query) => $query->where('status', 'active'))
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $inventoryRow) {
+                    throw new InvalidArgumentException('La herramienta seleccionada no esta activa o no esta asignada al vehiculo.');
+                }
+
+                if ((int) $inventoryRow->quantity_available < (int) $item['quantity']) {
+                    throw new InvalidArgumentException('No se puede solicitar mas cantidad de la disponible.');
+                }
+
                 $request->items()->create(['inventory_item_id' => $item['inventory_item_id'], 'quantity' => $item['quantity'], 'status' => 'reserved']);
                 $this->inventory->reserve($request->vehicle_id, $item['inventory_item_id'], $item['quantity'], $request->id);
             }
