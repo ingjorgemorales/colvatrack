@@ -1,7 +1,7 @@
 <script setup>
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
-import { ArrowLeft, CheckCircle, Clock3, MapPin, MessageCircle, PackageCheck, Send, Truck, X } from '@lucide/vue';
+import { ArrowLeft, CheckCircle, Clock3, MapPin, MessageCircle, PackageCheck, Phone, Send, Truck, X } from '@lucide/vue';
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import L from 'leaflet';
 
@@ -69,9 +69,34 @@ const timeline = computed(() => [
 const currentStatusClass = computed(() => statusClasses[props.request.status] ?? 'bg-slate-100 text-slate-700 border-slate-200');
 const hasVehicleRouteLocation = computed(() => Boolean(props.request.vehicle?.current_latitude && props.request.vehicle?.current_longitude));
 const vehicleRouteName = computed(() => props.request.vehicle?.plate ? `Vehiculo ${props.request.vehicle.plate}` : 'Vehiculo asignado');
+const contactActions = computed(() => {
+  const technician = {
+    key: 'technician',
+    label: 'Llamar tecnico',
+    name: props.request.technician?.name ?? 'Tecnico',
+    phone: props.request.technician?.phone ?? null,
+    href: phoneHref(props.request.technician?.phone),
+  };
+  const driver = {
+    key: 'driver',
+    label: 'Llamar conductor',
+    name: props.request.driver?.name ?? 'Conductor',
+    phone: props.request.driver?.phone ?? null,
+    href: phoneHref(props.request.driver?.phone),
+  };
+
+  if (props.role === 'Conductor') return [technician];
+  if (props.role === 'Tecnico') return [driver];
+
+  return [technician, driver];
+});
 
 function statusLabel(status) { return labels[status] ?? status; }
 function actionLabel(status) { return actionLabels[status] ?? `Marcar ${statusLabel(status)}`; }
+function phoneHref(phone) {
+  const cleanPhone = String(phone ?? '').replace(/[^\d+]/g, '');
+  return cleanPhone ? `tel:${cleanPhone}` : null;
+}
 function change(status){ commentForm.status = status; commentForm.patch(`/solicitudes/${props.request.id}/status`, { preserveScroll: true }); }
 function refreshRequest() {
   if (commentForm.processing) return;
@@ -249,6 +274,24 @@ onBeforeUnmount(() => { if(window.Echo && channelName) window.Echo.leave(channel
             <p v-if="!allowed.length" class="rounded-md bg-slate-50 p-3 text-sm text-slate-500">No tienes acciones pendientes para este estado.</p>
           </div>
           <p v-for="error in commentForm.errors" :key="error" class="mt-2 text-sm text-red-600">{{ error }}</p>
+        </section>
+
+        <section class="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 class="mb-4 flex items-center gap-2 font-semibold text-[#123f6e]"><Phone class="h-5 w-5" /> Contacto rapido</h2>
+          <div class="grid gap-3">
+            <div v-for="action in contactActions" :key="action.key" class="rounded-md bg-slate-50 p-3">
+              <div class="mb-2 text-sm">
+                <div class="font-semibold text-slate-900">{{ action.name }}</div>
+                <div class="text-slate-500">{{ action.phone ?? 'Sin telefono registrado' }}</div>
+              </div>
+              <a v-if="action.href" :href="action.href" class="flex w-full items-center justify-center gap-2 rounded-md bg-[#123f6e] px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#0e2d52]">
+                <Phone class="h-4 w-4" /> {{ action.label }}
+              </a>
+              <button v-else disabled class="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-md bg-slate-300 px-4 py-3 text-sm font-semibold text-slate-600">
+                <Phone class="h-4 w-4" /> {{ action.label }}
+              </button>
+            </div>
+          </div>
         </section>
 
         <section v-if="request.technician_latitude && request.technician_longitude" class="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
