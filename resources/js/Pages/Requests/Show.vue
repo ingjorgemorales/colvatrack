@@ -90,9 +90,27 @@ const contactActions = computed(() => {
 
   return [technician, driver];
 });
+const bogotaDateTimeFormatter = new Intl.DateTimeFormat('es-CO', {
+  timeZone: 'America/Bogota',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: true,
+});
 
 function statusLabel(status) { return labels[status] ?? status; }
 function actionLabel(status) { return actionLabels[status] ?? `Marcar ${statusLabel(status)}`; }
+function formatBogotaDateTime(value) {
+  if (!value) return '';
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return value;
+
+  return bogotaDateTimeFormatter.format(date);
+}
 function phoneHref(phone) {
   const cleanPhone = String(phone ?? '').replace(/[^\d+]/g, '');
   return cleanPhone ? `tel:${cleanPhone}` : null;
@@ -307,7 +325,7 @@ onBeforeUnmount(() => { if(window.Echo && channelName) window.Echo.leave(channel
           </button>
         </section>
 
-        <section class="rounded-md border border-slate-200 bg-white p-5 shadow-sm"><h2 class="mb-3 flex items-center gap-2 font-semibold text-[#123f6e]"><MessageCircle class="h-5 w-5" /> Chat</h2><div ref="chatBox" class="mb-3 h-80 space-y-3 overflow-y-auto rounded-md bg-slate-50 p-3"><div v-for="m in messages" :key="m.id" class="rounded-md bg-white p-3 text-sm shadow-sm"><div class="mb-1 font-semibold text-[#123f6e]">{{ m.sender?.name ?? 'Usuario' }}</div><p class="text-slate-700">{{ m.message }}</p><p class="mt-1 text-xs text-slate-400">{{ m.created_at }}</p></div><p v-if="!messages.length" class="py-8 text-center text-sm text-slate-500">Sin mensajes todavia.</p></div><form class="flex gap-2" @submit.prevent="sendMessage"><input v-model="messageForm.message" class="min-w-0 flex-1 rounded-md border border-slate-300 px-3 py-3" placeholder="Escribir mensaje" /><button :disabled="sendingMessage" class="cursor-pointer rounded-md bg-[#123f6e] px-4 text-white transition-colors hover:bg-[#0e2d52] disabled:cursor-not-allowed disabled:opacity-60"><Send class="h-5 w-5" /></button></form><p v-for="error in messageForm.errors" :key="error" class="mt-2 text-sm text-red-600">{{ error }}</p></section>
+        <section class="rounded-md border border-slate-200 bg-white p-5 shadow-sm"><h2 class="mb-3 flex items-center gap-2 font-semibold text-[#123f6e]"><MessageCircle class="h-5 w-5" /> Chat</h2><div ref="chatBox" class="mb-3 h-80 space-y-3 overflow-y-auto rounded-md bg-slate-50 p-3"><div v-for="m in messages" :key="m.id" class="rounded-md bg-white p-3 text-sm shadow-sm"><div class="mb-1 font-semibold text-[#123f6e]">{{ m.sender?.name ?? 'Usuario' }}</div><p class="text-slate-700">{{ m.message }}</p><p class="mt-1 text-xs text-slate-400">{{ formatBogotaDateTime(m.created_at) }}</p></div><p v-if="!messages.length" class="py-8 text-center text-sm text-slate-500">Sin mensajes todavia.</p></div><form class="flex gap-2" @submit.prevent="sendMessage"><input v-model="messageForm.message" class="min-w-0 flex-1 rounded-md border border-slate-300 px-3 py-3" placeholder="Escribir mensaje" /><button :disabled="sendingMessage" class="cursor-pointer rounded-md bg-[#123f6e] px-4 text-white transition-colors hover:bg-[#0e2d52] disabled:cursor-not-allowed disabled:opacity-60"><Send class="h-5 w-5" /></button></form><p v-for="error in messageForm.errors" :key="error" class="mt-2 text-sm text-red-600">{{ error }}</p></section>
       </aside>
     </section>
     <Teleport to="body">
