@@ -45,6 +45,8 @@ class FcmPushService
                         'android' => [
                             'priority' => 'high',
                             'notification' => [
+                                'icon' => 'ic_notification',
+                                'color' => '#123F6E',
                                 'click_action' => 'OPEN_NOTIFICATION',
                             ],
                         ],
