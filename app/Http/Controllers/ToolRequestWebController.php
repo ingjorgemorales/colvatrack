@@ -2,6 +2,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ToolRequest;
+use App\Models\VehicleLocation;
 use App\Models\Vehicle;
 use App\Services\ToolRequestService;
 use Illuminate\Http\Request;
@@ -102,11 +103,31 @@ class ToolRequestWebController extends Controller
         $user = auth()->user();
         abort_unless($user->hasRole('Administrador') || $solicitude->technician_id === $user->id || $solicitude->driver_id === $user->id, 403);
         $solicitude->load(['vehicle.inventory.item','technician','driver','items.item.category','histories.user','chat.messages.sender']);
+        $routeLocations = collect();
+
+        if ($solicitude->status === 'finalizada') {
+            $routeFrom = $solicitude->en_route_at
+                ?? $solicitude->accepted_at
+                ?? $solicitude->requested_at
+                ?? $solicitude->created_at;
+            $routeTo = $solicitude->finalized_at ?? $solicitude->updated_at ?? now();
+
+            $routeLocations = VehicleLocation::where('vehicle_id', $solicitude->vehicle_id)
+                ->whereNotNull('latitude')
+                ->whereNotNull('longitude')
+                ->when($routeFrom, fn ($query) => $query->where('gps_datetime', '>=', $routeFrom))
+                ->when($routeTo, fn ($query) => $query->where('gps_datetime', '<=', $routeTo))
+                ->orderBy('gps_datetime')
+                ->orderBy('id')
+                ->limit(1000)
+                ->get();
+        }
 
         return Inertia::render('Requests/Show', [
             'request' => $solicitude,
             'role' => $user->role?->name,
             'allowedTransitions' => $service->allowedTransitionsFor($solicitude, $user),
+            'routeLocations' => $routeLocations,
         ]);
     }
 

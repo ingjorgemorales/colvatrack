@@ -5,7 +5,12 @@ import { ArrowLeft, CheckCircle, Clock3, MapPin, MessageCircle, PackageCheck, Ph
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import L from 'leaflet';
 
-const props = defineProps({ request: Object, role: String, allowedTransitions: Array });
+const props = defineProps({
+  request: Object,
+  role: String,
+  allowedTransitions: Array,
+  routeLocations: { type: Array, default: () => [] },
+});
 const commentForm = useForm({ status: '', comment: '' });
 const messageForm = useForm({ message: '' });
 const messages = ref([...(props.request.chat?.messages ?? [])]);
@@ -69,6 +74,20 @@ const timeline = computed(() => [
 const currentStatusClass = computed(() => statusClasses[props.request.status] ?? 'bg-slate-100 text-slate-700 border-slate-200');
 const hasVehicleRouteLocation = computed(() => Boolean(props.request.vehicle?.current_latitude && props.request.vehicle?.current_longitude));
 const vehicleRouteName = computed(() => props.request.vehicle?.plate ? `Vehiculo ${props.request.vehicle.plate}` : 'Vehiculo asignado');
+const isFinalized = computed(() => props.request.status === 'finalizada');
+const routePoints = computed(() => props.routeLocations
+  .filter(location => location.latitude && location.longitude)
+  .map(location => ({ ...location, lat: Number(location.latitude), lng: Number(location.longitude) }))
+);
+const hasHistoricalRoute = computed(() => routePoints.value.length >= 2);
+const canOpenRouteMap = computed(() => isFinalized.value ? hasHistoricalRoute.value : Boolean(hasVehicleRouteLocation.value && props.request.technician_latitude && props.request.technician_longitude));
+const routeButtonText = computed(() => isFinalized.value ? 'Ver historial del trayecto' : 'Ver ruta en mapa');
+const routeModalTitle = computed(() => isFinalized.value ? 'Historial del trayecto' : 'Ruta hacia el tecnico');
+const routeUnavailableText = computed(() => {
+  if (isFinalized.value && !hasHistoricalRoute.value) return 'No hay suficientes puntos GPS guardados para mostrar el historial del trayecto.';
+  if (!isFinalized.value && !hasVehicleRouteLocation.value) return 'El vehiculo asignado no tiene ubicacion GPS disponible.';
+  return '';
+});
 const contactActions = computed(() => {
   const technician = {
     key: 'technician',
@@ -118,7 +137,7 @@ function phoneHref(phone) {
 function change(status){ commentForm.status = status; commentForm.patch(`/solicitudes/${props.request.id}/status`, { preserveScroll: true }); }
 function refreshRequest() {
   if (commentForm.processing) return;
-  router.reload({ only: ['request', 'allowedTransitions'], preserveScroll: true, preserveState: true });
+  router.reload({ only: ['request', 'allowedTransitions', 'routeLocations'], preserveScroll: true, preserveState: true });
 }
 function isCurrentRequestEvent(event) {
   const id = event?.tool_request?.id ?? event?.toolRequest?.id ?? event?.id;
@@ -185,22 +204,61 @@ async function sendMessage(){
 }
 
 function openRouteMap() {
+  if (!canOpenRouteMap.value) return;
+
   showRouteMap.value = true;
   routeInfo.value = null;
   locating.value = true;
   nextTick(() => {
     locating.value = false;
+    if (isFinalized.value) {
+      initHistoricalMap();
+      return;
+    }
+
     const vehicleLat = Number(props.request.vehicle?.current_latitude);
     const vehicleLng = Number(props.request.vehicle?.current_longitude);
     const techLat = Number(props.request.technician_latitude);
     const techLng = Number(props.request.technician_longitude);
-    if (vehicleLat && vehicleLng && techLat && techLng) initMap(vehicleLat, vehicleLng, techLat, techLng);
+    if (vehicleLat && vehicleLng && techLat && techLng) initLiveMap(vehicleLat, vehicleLng, techLat, techLng);
   });
 }
-function initMap(vehicleLat, vehicleLng, techLat, techLng) {
+function initBaseMap(center) {
   if (routeMap) routeMap.remove();
-  routeMap = L.map(mapEl.value, { zoomControl: true }).setView([vehicleLat, vehicleLng], 13);
+  routeMap = L.map(mapEl.value, { zoomControl: true }).setView(center, 13);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: 'Leaflet | OpenStreetMap' }).addTo(routeMap);
+}
+function routeDistanceKm(points) {
+  let meters = 0;
+  for (let i = 1; i < points.length; i += 1) {
+    meters += distanceMeters(points[i - 1], points[i]);
+  }
+  return (meters / 1000).toFixed(1);
+}
+function distanceMeters(a, b) {
+  const radius = 6371000;
+  const dLat = (b.lat - a.lat) * Math.PI / 180;
+  const dLng = (b.lng - a.lng) * Math.PI / 180;
+  const lat1 = a.lat * Math.PI / 180;
+  const lat2 = b.lat * Math.PI / 180;
+  const x = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return radius * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+}
+function pointPopup(point, title) {
+  return `
+    <div class="vehicle-popup route-popup">
+      <div class="vehicle-popup__title">${escapeHtml(title)}</div>
+      <dl>
+        <div><dt>Fecha GPS</dt><dd>${escapeHtml(point.gps_datetime ?? '-')}</dd></div>
+        <div><dt>Velocidad</dt><dd>${escapeHtml(point.speed ?? 0)} km/h</dd></div>
+        <div><dt>Evento</dt><dd>${escapeHtml(point.gps_event ?? '-')}</dd></div>
+        <div><dt>Direccion</dt><dd>${escapeHtml(point.address ?? '-')}</dd></div>
+      </dl>
+    </div>
+  `;
+}
+function initLiveMap(vehicleLat, vehicleLng, techLat, techLng) {
+  initBaseMap([vehicleLat, vehicleLng]);
   L.marker([vehicleLat, vehicleLng], {
     icon: L.divIcon({
       className: '', iconSize: [32, 32], iconAnchor: [16, 16],
@@ -229,6 +287,35 @@ function initMap(vehicleLat, vehicleLng, techLat, techLng) {
       routeMap.fitBounds(bounds, { padding: [52, 52], maxZoom: 14 });
     });
 }
+function initHistoricalMap() {
+  const points = routePoints.value;
+  if (!points.length) return;
+
+  initBaseMap([points[0].lat, points[0].lng]);
+
+  const latLngs = points.map(point => [point.lat, point.lng]);
+  L.polyline(latLngs, { color: '#ffffff', weight: 12, opacity: 0.95, lineCap: 'round', lineJoin: 'round' }).addTo(routeMap);
+  L.polyline(latLngs, { color: '#123f6e', weight: 7, opacity: 1, lineCap: 'round', lineJoin: 'round' }).addTo(routeMap);
+  L.polyline(latLngs, { color: '#9fb428', weight: 3, opacity: 1, dashArray: '8 10', lineCap: 'round' }).addTo(routeMap);
+
+  points.forEach(point => {
+    L.circleMarker([point.lat, point.lng], {
+      radius: 3,
+      color: '#ffffff',
+      weight: 1,
+      fillColor: Number(point.speed || 0) > 0 ? '#15803d' : '#475569',
+      fillOpacity: 0.95,
+      interactive: false,
+    }).addTo(routeMap);
+  });
+
+  const first = points[0];
+  const last = points[points.length - 1];
+  L.marker([first.lat, first.lng]).addTo(routeMap).bindPopup(pointPopup(first, 'Inicio del trayecto'));
+  L.marker([last.lat, last.lng]).addTo(routeMap).bindPopup(pointPopup(last, 'Final del trayecto'));
+  routeInfo.value = { distance: routeDistanceKm(points), duration: null, points: points.length };
+  routeMap.fitBounds(latLngs, { padding: [52, 52], maxZoom: 17 });
+}
 function closeRouteMap() {
   showRouteMap.value = false;
   if (routeMap) { routeMap.remove(); routeMap = null; }
@@ -251,6 +338,19 @@ onMounted(() => {
   chatPollTimer = window.setInterval(syncChat, 5000);
 });
 watch(() => props.request.chat?.messages, (incoming) => mergeMessages(incoming ?? []));
+watch(() => [
+  props.request.status,
+  props.request.vehicle?.current_latitude,
+  props.request.vehicle?.current_longitude,
+  props.routeLocations?.length,
+], () => {
+  if (!showRouteMap.value) return;
+  if (!canOpenRouteMap.value) {
+    closeRouteMap();
+    return;
+  }
+  openRouteMap();
+});
 onBeforeUnmount(() => { if(window.Echo && channelName) window.Echo.leave(channelName); if(window.Echo && requestChannelName) window.Echo.leave(requestChannelName); if(refreshTimer) window.clearInterval(refreshTimer); if(chatPollTimer) window.clearInterval(chatPollTimer); closeRouteMap(); });
 </script>
 <template>
@@ -316,11 +416,13 @@ onBeforeUnmount(() => { if(window.Echo && channelName) window.Echo.leave(channel
         </section>
 
         <section v-if="request.technician_latitude && request.technician_longitude" class="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 class="mb-4 flex items-center gap-2 font-semibold text-[#123f6e]"><MapPin class="h-5 w-5" /> Ubicacion del tecnico</h2>
+          <h2 class="mb-4 flex items-center gap-2 font-semibold text-[#123f6e]"><MapPin class="h-5 w-5" /> {{ isFinalized ? 'Historial del trayecto' : 'Ubicacion del tecnico' }}</h2>
           <p class="mb-3 text-sm text-slate-600">{{ request.technician_address ?? 'Direccion no registrada' }}</p>
-          <p v-if="!hasVehicleRouteLocation" class="mb-3 rounded-md bg-amber-50 p-3 text-sm text-amber-800">El vehiculo asignado no tiene ubicacion GPS disponible.</p>
-          <button :disabled="!hasVehicleRouteLocation" @click="openRouteMap" class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-md bg-[#123f6e] px-4 py-3 font-semibold text-white transition-colors hover:bg-[#0e2d52] disabled:cursor-not-allowed disabled:opacity-60">
-            <MapPin class="h-4 w-4" /> Ver ruta en mapa
+          <p v-if="routeUnavailableText" class="mb-3 rounded-md bg-amber-50 p-3 text-sm text-amber-800">{{ routeUnavailableText }}</p>
+          <p v-else-if="isFinalized" class="mb-3 rounded-md bg-emerald-50 p-3 text-sm text-emerald-800">Esta solicitud ya finalizo. El mapa mostrara el recorrido guardado durante el trayecto.</p>
+          <p v-else class="mb-3 rounded-md bg-blue-50 p-3 text-sm text-blue-800">Esta solicitud sigue activa. El mapa usara la ubicacion actual del vehiculo.</p>
+          <button :disabled="!canOpenRouteMap" @click="openRouteMap" class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-md bg-[#123f6e] px-4 py-3 font-semibold text-white transition-colors hover:bg-[#0e2d52] disabled:cursor-not-allowed disabled:opacity-60">
+            <MapPin class="h-4 w-4" /> {{ routeButtonText }}
           </button>
         </section>
 
@@ -332,8 +434,9 @@ onBeforeUnmount(() => { if(window.Echo && channelName) window.Echo.leave(channel
         <div class="flex w-full max-w-4xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl" style="max-height:90vh">
           <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
             <div>
-              <h3 class="font-bold text-[#123f6e]">Ruta hacia el tecnico</h3>
-              <p v-if="routeInfo" class="text-sm text-slate-500">{{ routeInfo.distance }} km · {{ routeInfo.duration }} min</p>
+              <h3 class="font-bold text-[#123f6e]">{{ routeModalTitle }}</h3>
+              <p v-if="routeInfo && routeInfo.duration" class="text-sm text-slate-500">{{ routeInfo.distance }} km - {{ routeInfo.duration }} min</p>
+              <p v-else-if="routeInfo" class="text-sm text-slate-500">{{ routeInfo.distance }} km - {{ routeInfo.points }} puntos GPS</p>
               <p v-else-if="locating" class="text-sm text-slate-500">Cargando ubicacion del vehiculo...</p>
             </div>
             <button @click="closeRouteMap" class="cursor-pointer rounded-md p-2 text-slate-500 transition-colors hover:bg-slate-100"><X class="h-5 w-5" /></button>
