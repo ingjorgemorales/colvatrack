@@ -31,38 +31,24 @@ class VehicleActivityService
             ->orderBy('plate')
             ->get();
 
-        $locations = VehicleLocation::whereIn('vehicle_id', $vehicles->pluck('id'))
+        $vehicleIds = $vehicles->pluck('id')->filter();
+        $activity = VehicleLocation::whereIn('vehicle_id', $vehicleIds)
             ->whereNotNull('gps_datetime')
             ->where('gps_datetime', '>=', $from)
             ->where('gps_datetime', '<=', $to)
-            ->orderBy('vehicle_id')
-            ->orderBy('gps_datetime')
-            ->orderBy('id')
+            ->selectRaw('vehicle_id, COUNT(*) as points_count, MAX(COALESCE(speed, 0)) as max_speed, MIN(gps_datetime) as first_gps_datetime, MAX(gps_datetime) as last_gps_datetime')
+            ->groupBy('vehicle_id')
             ->get()
-            ->groupBy('vehicle_id');
+            ->keyBy('vehicle_id');
 
-        $rows = $vehicles->map(function (Vehicle $vehicle) use ($locations, $threshold, $freshAfter, $from, $to) {
-            $points = $locations->get($vehicle->id, collect())->values();
-            $distance = 0.0;
-            $hasMovementByDistance = false;
-            $previous = null;
-
-            foreach ($points as $point) {
-                if ($previous) {
-                    $segmentDistance = $this->distanceMeters($previous, $point);
-                    $distance += $segmentDistance;
-                    if ($segmentDistance >= $threshold) {
-                        $hasMovementByDistance = true;
-                    }
-                }
-
-                $previous = $point;
-            }
-
-            $maxSpeed = (float) ($points->max('speed') ?? 0);
+        $rows = $vehicles->map(function (Vehicle $vehicle) use ($activity, $threshold, $freshAfter, $from, $to) {
+            $stats = $activity->get($vehicle->id);
+            $firstPoint = $stats ? $this->boundPoint($vehicle->id, $stats->first_gps_datetime, 'asc') : null;
+            $lastPoint = $stats ? $this->boundPoint($vehicle->id, $stats->last_gps_datetime, 'desc') : null;
+            $distance = ($firstPoint && $lastPoint) ? $this->distanceMeters($firstPoint, $lastPoint) : 0.0;
+            $hasMovementByDistance = $distance >= $threshold;
+            $maxSpeed = (float) ($stats?->max_speed ?? 0);
             $hasMovement = $maxSpeed > 0 || $hasMovementByDistance;
-            $firstPoint = $points->first();
-            $lastPoint = $points->last();
             $fromParam = $from->format('Y-m-d\TH:i');
             $toParam = $to->format('Y-m-d\TH:i');
 
@@ -72,12 +58,12 @@ class VehicleActivityService
                 'driver' => $vehicle->driver ? trim($vehicle->driver->name.' '.$vehicle->driver->last_name) : 'Sin conductor',
                 'status' => $hasMovement ? 'moving' : 'stopped',
                 'status_label' => $hasMovement ? 'En movimiento' : 'Sin movimiento',
-                'points_count' => $points->count(),
+                'points_count' => (int) ($stats?->points_count ?? 0),
                 'max_speed' => round($maxSpeed, 1),
                 'distance_meters' => round($distance, 1),
                 'distance_km' => round($distance / 1000, 2),
-                'first_gps_datetime' => $this->formatDateTime($firstPoint?->gps_datetime),
-                'last_gps_datetime' => $this->formatDateTime($lastPoint?->gps_datetime),
+                'first_gps_datetime' => $this->formatDateTime($stats?->first_gps_datetime),
+                'last_gps_datetime' => $this->formatDateTime($stats?->last_gps_datetime),
                 'vehicle_last_gps_datetime' => $this->formatDateTime($vehicle->last_gps_datetime),
                 'gps_is_fresh' => $vehicle->last_gps_datetime && $vehicle->last_gps_datetime->greaterThan($freshAfter),
                 'movement_basis' => $maxSpeed > 0 ? 'speed' : ($hasMovementByDistance ? 'distance' : 'none'),
@@ -129,6 +115,20 @@ class VehicleActivityService
         } catch (\Throwable) {
             return null;
         }
+    }
+
+    private function boundPoint(int $vehicleId, ?string $gpsDatetime, string $direction): ?VehicleLocation
+    {
+        if (! $gpsDatetime) {
+            return null;
+        }
+
+        return VehicleLocation::where('vehicle_id', $vehicleId)
+            ->where('gps_datetime', $gpsDatetime)
+            ->whereNotNull('latitude')
+            ->whereNotNull('longitude')
+            ->orderBy('id', $direction === 'desc' ? 'desc' : 'asc')
+            ->first(['latitude', 'longitude']);
     }
 
     private function formatDateTime($value): ?string
