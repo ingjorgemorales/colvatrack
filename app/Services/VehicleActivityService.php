@@ -10,6 +10,31 @@ use Illuminate\Http\Request;
 
 class VehicleActivityService
 {
+    public function stoppedTodayCount(): int
+    {
+        $from = now()->startOfDay();
+        $to = now()->endOfDay();
+        $movingVehicleIds = VehicleLocation::whereNotNull('gps_datetime')
+            ->where('gps_datetime', '>=', $from)
+            ->where('gps_datetime', '<=', $to)
+            ->where('speed', '>', 0)
+            ->distinct()
+            ->pluck('vehicle_id');
+
+        return Vehicle::where('status', 'active')
+            ->when($movingVehicleIds->isNotEmpty(), fn ($query) => $query->whereNotIn('id', $movingVehicleIds))
+            ->count();
+    }
+
+    public function stoppedTodayUrl(): string
+    {
+        return '/vehiculos/actividad?'.http_build_query([
+            'from' => now()->format('Y-m-d'),
+            'to' => now()->format('Y-m-d'),
+            'status' => 'stopped',
+        ]);
+    }
+
     public function rangeFromRequest(Request $request, string $fromKey = 'from', string $toKey = 'to'): array
     {
         $from = $this->parseDate($request->string($fromKey)->toString()) ?? now()->startOfDay()->toImmutable();

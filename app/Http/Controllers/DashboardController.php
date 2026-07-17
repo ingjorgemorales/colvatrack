@@ -9,16 +9,14 @@ use App\Models\ToolRequestDelay;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Services\VehicleActivityService;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
-    public function __invoke(Request $request, VehicleActivityService $vehicleActivityService)
+    public function __invoke(VehicleActivityService $vehicleActivityService)
     {
         $user = auth()->user()->load('role');
         $role = $user->role?->name ?? 'Usuario';
-        $vehicleActivity = null;
 
         if ($user->hasRole('Tecnico')) {
             $stats = [
@@ -43,14 +41,10 @@ class DashboardController extends Controller
             ];
             $recentRequests = ToolRequest::with(['vehicle','technician','driver','activeDelays'])->where('driver_id', $user->id)->latest()->limit(8)->get();
         } else {
-            [$activityFrom, $activityTo] = $vehicleActivityService->rangeFromRequest($request, 'activity_from', 'activity_to');
-            $vehicleActivity = $vehicleActivityService->summary($activityFrom, $activityTo);
-
             $stats = [
                 ['label' => 'Total vehiculos', 'value' => Vehicle::count(), 'icon' => 'Car', 'route' => '/vehiculos'],
                 ['label' => 'Vehiculos activos', 'value' => Vehicle::where('status','active')->count(), 'icon' => 'MapPin', 'route' => '/vehiculos?status=active'],
-                ['label' => 'En movimiento', 'value' => $vehicleActivity['summary']['moving_count'], 'icon' => 'MapPin', 'route' => $vehicleActivity['detail_url'].'&status=moving'],
-                ['label' => 'Sin movimiento', 'value' => $vehicleActivity['summary']['stopped_count'], 'icon' => 'Clock3', 'route' => $vehicleActivity['detail_url'].'&status=stopped'],
+                ['label' => 'Sin movimiento hoy', 'value' => $vehicleActivityService->stoppedTodayCount(), 'icon' => 'Clock3', 'route' => $vehicleActivityService->stoppedTodayUrl()],
                 ['label' => 'Total usuarios', 'value' => User::count(), 'icon' => 'Users', 'route' => '/usuarios'],
                 ['label' => 'Solicitudes pendientes', 'value' => ToolRequest::where('status','pendiente')->count(), 'icon' => 'ClipboardList', 'route' => '/solicitudes?status=pendiente'],
                 ['label' => 'En demora', 'value' => ToolRequestDelay::where('status', 'active')->count(), 'icon' => 'AlertTriangle', 'route' => '/solicitudes?delay=active'],
@@ -65,7 +59,6 @@ class DashboardController extends Controller
             'recentRequests' => $recentRequests,
             'role' => $role,
             'notifications' => Notification::where('user_id', $user->id)->latest()->limit(5)->get(),
-            'vehicleActivity' => $vehicleActivity,
         ]);
     }
 }
