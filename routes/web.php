@@ -62,7 +62,6 @@ Route::middleware(['auth', 'must.change.password', 'audit'])->group(function () 
 
     Route::resource('usuarios', UserController::class)->parameters(['usuarios' => 'usuario'])->except('show')->middleware('role:Administrador');
     Route::resource('roles', RoleController::class)->except('show')->middleware('role:Administrador');
-    Route::get('/vehiculos/actividad', [VehicleController::class, 'activity'])->name('vehiculos.actividad')->middleware('role:Administrador');
     Route::resource('vehiculos', VehicleController::class)->parameters(['vehiculos' => 'vehiculo'])->except('show')->middleware('role:Administrador');
     Route::get('/vehiculos/{vehiculo}/recorrido', [VehicleController::class, 'routeHistory'])->name('vehiculos.recorrido')->middleware('permission:vehiculos,recorrido');
     Route::resource('configuracion/gps', GpsProviderController::class)->parameters(['gps' => 'gpsProvider'])->names('gps-providers')->except('show')->middleware('role:Administrador');

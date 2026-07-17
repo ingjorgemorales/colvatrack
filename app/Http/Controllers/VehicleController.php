@@ -5,9 +5,7 @@ use App\Models\GpsProvider;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\Vehicle;
-use App\Services\VehicleActivityService;
 use Carbon\CarbonImmutable;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -25,9 +23,16 @@ class VehicleController extends Controller
                 ->orWhere('model', 'like', "%$search%"));
         }
         if ($request->filled('status')) { $query->where('status', $request->status); }
+        if ($request->input('movement') === 'moving') {
+            $query->where('current_speed', '>', 0);
+        }
+        if ($request->input('movement') === 'stopped') {
+            $query->where('status', 'active')
+                ->where(fn ($q) => $q->whereNull('current_speed')->orWhere('current_speed', '<=', 0));
+        }
         return Inertia::render('Vehicles/Index', [
             'vehicles' => $query->paginate($perPage)->withQueryString(),
-            'filters' => $request->only('search', 'status', 'per_page'),
+            'filters' => $request->only('search', 'status', 'movement', 'per_page'),
         ]);
     }
 
@@ -80,48 +85,6 @@ class VehicleController extends Controller
             'filters' => [
                 'from' => $from->format('Y-m-d\TH:i'),
                 'to' => $to->format('Y-m-d\TH:i'),
-            ],
-        ]);
-    }
-
-    public function activity(Request $request, VehicleActivityService $activityService)
-    {
-        [$from, $to] = $activityService->rangeFromRequest($request);
-        $activity = $activityService->summary($from, $to);
-        $rows = collect($activity['rows']);
-        $status = $request->string('status')->toString();
-        $search = trim($request->string('search')->toString());
-        $perPage = min(max((int) $request->integer('per_page', 10), 5), 100);
-        $page = max((int) $request->integer('page', 1), 1);
-
-        if (in_array($status, ['moving', 'stopped'], true)) {
-            $rows = $rows->where('status', $status)->values();
-        }
-
-        if ($search !== '') {
-            $needle = mb_strtolower($search);
-            $rows = $rows->filter(fn ($row) => str_contains(mb_strtolower($row['plate'].' '.$row['driver']), $needle))->values();
-        }
-
-        $paginatedRows = new LengthAwarePaginator(
-            $rows->forPage($page, $perPage)->values(),
-            $rows->count(),
-            $perPage,
-            $page,
-            ['path' => $request->url(), 'query' => $request->query()]
-        );
-
-        return Inertia::render('Vehicles/Activity', [
-            'activity' => [
-                ...$activity,
-                'rows' => $paginatedRows,
-            ],
-            'filters' => [
-                'from' => $from->format('Y-m-d'),
-                'to' => $to->format('Y-m-d'),
-                'status' => $status,
-                'search' => $search,
-                'per_page' => $perPage,
             ],
         ]);
     }

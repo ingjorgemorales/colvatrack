@@ -8,12 +8,11 @@ use App\Models\ToolRequest;
 use App\Models\ToolRequestDelay;
 use App\Models\User;
 use App\Models\Vehicle;
-use App\Services\VehicleActivityService;
 use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
-    public function __invoke(VehicleActivityService $vehicleActivityService)
+    public function __invoke()
     {
         $user = auth()->user()->load('role');
         $role = $user->role?->name ?? 'Usuario';
@@ -44,7 +43,8 @@ class DashboardController extends Controller
             $stats = [
                 ['label' => 'Total vehiculos', 'value' => Vehicle::count(), 'icon' => 'Car', 'route' => '/vehiculos'],
                 ['label' => 'Vehiculos activos', 'value' => Vehicle::where('status','active')->count(), 'icon' => 'MapPin', 'route' => '/vehiculos?status=active'],
-                ['label' => 'Sin movimiento hoy', 'value' => $vehicleActivityService->stoppedTodayCount(), 'icon' => 'Clock3', 'route' => $vehicleActivityService->stoppedTodayUrl()],
+                ['label' => 'En movimiento', 'value' => Vehicle::where('current_speed','>',0)->count(), 'icon' => 'MapPin', 'route' => '/vehiculos?movement=moving'],
+                ['label' => 'Sin movimiento', 'value' => Vehicle::where('status', 'active')->where(fn ($q) => $q->whereNull('current_speed')->orWhere('current_speed', '<=', 0))->count(), 'icon' => 'Clock3', 'route' => '/vehiculos?movement=stopped'],
                 ['label' => 'Total usuarios', 'value' => User::count(), 'icon' => 'Users', 'route' => '/usuarios'],
                 ['label' => 'Solicitudes pendientes', 'value' => ToolRequest::where('status','pendiente')->count(), 'icon' => 'ClipboardList', 'route' => '/solicitudes?status=pendiente'],
                 ['label' => 'En demora', 'value' => ToolRequestDelay::where('status', 'active')->count(), 'icon' => 'AlertTriangle', 'route' => '/solicitudes?delay=active'],
