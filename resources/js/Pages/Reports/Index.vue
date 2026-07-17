@@ -27,7 +27,7 @@ const statusFilters = {
   movements: { label: 'Tipo de movimiento', options: ['stock_update', 'reserved', 'released', 'delivered', 'returned'] },
   audit: { label: 'Modulo', options: ['dashboard', 'mapa', 'solicitudes', 'chat', 'notificaciones', 'inventario', 'vehiculos', 'reportes', 'usuarios', 'roles', 'auditoria', 'perfil', 'configuracion_gps'] },
   activity: { label: 'Estado nuevo', options: ['pendiente', 'aceptada', 'rechazada', 'vencida', 'en_camino', 'entregada', 'en_uso', 'para_recoger', 'recogida', 'finalizada', 'cancelada'] },
-  notifications: { label: 'Tipo', options: ['info', 'tool_request', 'tool_request_status', 'chat', 'gps_stale_summary', 'request_delay_summary', 'low_stock_summary'] },
+  notifications: { label: 'Tipo', options: ['info', 'tool_request', 'tool_request_status', 'tool_request_delay', 'chat', 'gps_stale_summary', 'request_delay_summary', 'low_stock_summary'] },
 };
 const statusFilter = computed(() => statusFilters[form.type] ?? null);
 const exportUrl = computed(() => {

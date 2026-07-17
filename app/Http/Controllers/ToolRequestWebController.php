@@ -15,11 +15,12 @@ class ToolRequestWebController extends Controller
     public function index(Request $request)
     {
         $user = auth()->user();
-        $query = ToolRequest::with(['vehicle','technician','driver','items.item'])->latest();
+        $query = ToolRequest::with(['vehicle','technician','driver','items.item','activeDelays'])->latest();
         if ($user->hasRole('Tecnico')) { $query->where('technician_id', $user->id); }
         if ($user->hasRole('Conductor')) { $query->where('driver_id', $user->id); }
         if ($request->filled('status')) { $query->where('status', $request->status); }
         if ($request->filled('priority')) { $query->where('priority', $request->priority); }
+        if ($request->query('delay') === 'active') { $query->whereHas('activeDelays'); }
         if ($request->filled('search')) {
             $search = $request->string('search');
             $query->where(function ($q) use ($search) {
@@ -33,7 +34,7 @@ class ToolRequestWebController extends Controller
         return Inertia::render('Requests/Index', [
             'requests' => $query->paginate($perPage)->withQueryString(),
             'role' => $user->role?->name,
-            'filters' => $request->only('search','status','priority','per_page'),
+            'filters' => $request->only('search','status','priority','delay','per_page'),
             'activeTechnicianRequest' => $user->hasRole('Tecnico')
                 ? ToolRequest::with('vehicle')->where('technician_id', $user->id)->activeForTechnician()->latest()->first()
                 : null,
@@ -111,7 +112,7 @@ class ToolRequestWebController extends Controller
     {
         $user = auth()->user();
         abort_unless($user->hasRole('Administrador') || $solicitude->technician_id === $user->id || $solicitude->driver_id === $user->id, 403);
-        $solicitude->load(['vehicle.inventory.item','technician','driver','items.item.category','histories.user','chat.messages.sender']);
+        $solicitude->load(['vehicle.inventory.item','technician','driver','items.item.category','histories.user','chat.messages.sender','activeDelays']);
         $routeLocations = collect();
 
         if ($solicitude->status === 'finalizada') {
@@ -137,6 +138,8 @@ class ToolRequestWebController extends Controller
             'role' => $user->role?->name,
             'allowedTransitions' => $service->allowedTransitionsFor($solicitude, $user),
             'routeLocations' => $routeLocations,
+            'deliveryDistanceMeters' => $service->vehicleTechnicianDistance($solicitude),
+            'deliveryRadiusMeters' => 50,
         ]);
     }
 
@@ -144,7 +147,7 @@ class ToolRequestWebController extends Controller
     {
         $user = $request->user();
         abort_unless($user->hasRole('Administrador') || $solicitude->driver_id === $user->id || $solicitude->technician_id === $user->id, 403);
-        $data = $request->validate(['status' => ['required', 'in:aceptada,rechazada,en_camino,entregada,en_uso,para_recoger,recogida,finalizada,cancelada'], 'comment' => ['nullable', 'string']]);
+        $data = $request->validate(['status' => ['required', 'in:en_camino,en_uso,para_recoger,recogida,finalizada,cancelada'], 'comment' => ['nullable', 'string']]);
         try { $service->assertCanTransition($solicitude, $user, $data['status']); $service->changeStatus($solicitude, $data['status'], $user->id, $data['comment'] ?? null); }
         catch (\Throwable $e) { return back()->with('error', $e->getMessage()); }
         return back()->with('success', 'Estado actualizado.');

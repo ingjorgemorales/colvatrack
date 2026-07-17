@@ -1,5 +1,82 @@
 <?php
+
 namespace App\Models;
+
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
-class ToolRequest extends Model { public const ACTIVE_STATUSES = ['pendiente', 'aceptada', 'en_camino', 'entregada']; public const TECHNICIAN_ACTIVE_STATUSES = ['pendiente', 'aceptada', 'en_camino', 'entregada', 'en_uso', 'para_recoger', 'recogida']; protected $guarded = []; protected function casts(): array { return ['requested_at'=>'datetime:Y-m-d H:i:s','accepted_at'=>'datetime:Y-m-d H:i:s','rejected_at'=>'datetime:Y-m-d H:i:s','en_route_at'=>'datetime:Y-m-d H:i:s','delivered_at'=>'datetime:Y-m-d H:i:s','picked_up_at'=>'datetime:Y-m-d H:i:s','ready_for_pickup_at'=>'datetime:Y-m-d H:i:s','finalized_at'=>'datetime:Y-m-d H:i:s','cancelled_at'=>'datetime:Y-m-d H:i:s','created_at'=>'datetime:Y-m-d H:i:s','updated_at'=>'datetime:Y-m-d H:i:s']; } public function scopeActiveForVehicle(Builder $query): Builder { return $query->whereIn('status', self::ACTIVE_STATUSES); } public function scopeActiveForTechnician(Builder $query): Builder { return $query->whereIn('status', self::TECHNICIAN_ACTIVE_STATUSES); } public function technician(){ return $this->belongsTo(User::class, 'technician_id'); } public function driver(){ return $this->belongsTo(User::class, 'driver_id'); } public function vehicle(){ return $this->belongsTo(Vehicle::class); } public function items(){ return $this->hasMany(ToolRequestItem::class); } public function histories(){ return $this->hasMany(ToolRequestStatusHistory::class); } public function chat(){ return $this->hasOne(Chat::class); } }
+
+class ToolRequest extends Model
+{
+    public const ACTIVE_STATUSES = ['pendiente', 'aceptada', 'en_camino', 'entregada', 'en_uso', 'para_recoger', 'recogida'];
+    public const TECHNICIAN_ACTIVE_STATUSES = self::ACTIVE_STATUSES;
+    public const CLOSED_STATUSES = ['rechazada', 'vencida', 'finalizada', 'cancelada'];
+
+    protected $guarded = [];
+
+    protected function casts(): array
+    {
+        return [
+            'requested_at' => 'datetime:Y-m-d H:i:s',
+            'accepted_at' => 'datetime:Y-m-d H:i:s',
+            'rejected_at' => 'datetime:Y-m-d H:i:s',
+            'en_route_at' => 'datetime:Y-m-d H:i:s',
+            'delivered_at' => 'datetime:Y-m-d H:i:s',
+            'picked_up_at' => 'datetime:Y-m-d H:i:s',
+            'ready_for_pickup_at' => 'datetime:Y-m-d H:i:s',
+            'finalized_at' => 'datetime:Y-m-d H:i:s',
+            'cancelled_at' => 'datetime:Y-m-d H:i:s',
+            'created_at' => 'datetime:Y-m-d H:i:s',
+            'updated_at' => 'datetime:Y-m-d H:i:s',
+        ];
+    }
+
+    public function scopeActiveForVehicle(Builder $query): Builder
+    {
+        return $query->whereIn('status', self::ACTIVE_STATUSES);
+    }
+
+    public function scopeActiveForTechnician(Builder $query): Builder
+    {
+        return $query->whereIn('status', self::TECHNICIAN_ACTIVE_STATUSES);
+    }
+
+    public function technician()
+    {
+        return $this->belongsTo(User::class, 'technician_id');
+    }
+
+    public function driver()
+    {
+        return $this->belongsTo(User::class, 'driver_id');
+    }
+
+    public function vehicle()
+    {
+        return $this->belongsTo(Vehicle::class);
+    }
+
+    public function items()
+    {
+        return $this->hasMany(ToolRequestItem::class);
+    }
+
+    public function histories()
+    {
+        return $this->hasMany(ToolRequestStatusHistory::class);
+    }
+
+    public function delays()
+    {
+        return $this->hasMany(ToolRequestDelay::class);
+    }
+
+    public function activeDelays()
+    {
+        return $this->hasMany(ToolRequestDelay::class)->where('status', 'active');
+    }
+
+    public function chat()
+    {
+        return $this->hasOne(Chat::class);
+    }
+}

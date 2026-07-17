@@ -10,6 +10,8 @@ const props = defineProps({
   role: String,
   allowedTransitions: Array,
   routeLocations: { type: Array, default: () => [] },
+  deliveryDistanceMeters: Number,
+  deliveryRadiusMeters: { type: Number, default: 50 },
 });
 const commentForm = useForm({ status: '', comment: '' });
 const messageForm = useForm({ message: '' });
@@ -41,13 +43,10 @@ const labels = {
   cancelada: 'Cancelada',
 };
 const actionLabels = {
-  aceptada: 'Aceptar solicitud',
-  rechazada: 'Rechazar solicitud',
-  en_camino: 'Voy en camino',
-  entregada: 'Marcar entregada',
-  en_uso: 'Recibido / en uso',
+  en_camino: 'Aceptar',
+  en_uso: 'Entregar herramienta',
   para_recoger: 'Listo para recoger',
-  recogida: 'Herramientas recogidas',
+  recogida: 'Herramienta recogida',
   finalizada: 'Finalizar solicitud',
   cancelada: 'Cancelar solicitud',
 };
@@ -75,6 +74,7 @@ const timeline = computed(() => [
   ['finalized_at', 'Finalizada'],
 ].filter(([key]) => props.request[key]));
 const currentStatusClass = computed(() => statusClasses[props.request.status] ?? 'bg-slate-100 text-slate-700 border-slate-200');
+const activeDelay = computed(() => props.request.active_delays?.[0] ?? null);
 const hasVehicleRouteLocation = computed(() => Boolean(props.request.vehicle?.current_latitude && props.request.vehicle?.current_longitude));
 const vehicleRouteName = computed(() => props.request.vehicle?.plate ? `Vehiculo ${props.request.vehicle.plate}` : 'Vehiculo asignado');
 const isFinalized = computed(() => props.request.status === 'finalizada');
@@ -85,6 +85,8 @@ const routePoints = computed(() => props.routeLocations
   .map(location => ({ ...location, lat: Number(location.latitude), lng: Number(location.longitude) }))
 );
 const hasHistoricalRoute = computed(() => routePoints.value.length >= 2);
+const deliveryDistanceText = computed(() => props.deliveryDistanceMeters === null || props.deliveryDistanceMeters === undefined ? 'Sin GPS' : `${props.deliveryDistanceMeters} m`);
+const canDeliverTool = computed(() => props.deliveryDistanceMeters !== null && props.deliveryDistanceMeters !== undefined && Number(props.deliveryDistanceMeters) <= Number(props.deliveryRadiusMeters));
 const canOpenRouteMap = computed(() => {
   if (isFinalized.value) return hasHistoricalRoute.value;
   if (isActiveRequest.value) return Boolean(hasVehicleRouteLocation.value && props.request.technician_latitude && props.request.technician_longitude);
@@ -143,6 +145,12 @@ const bogotaDateTimeFormatter = new Intl.DateTimeFormat('es-CO', {
 
 function statusLabel(status) { return labels[status] ?? status; }
 function actionLabel(status) { return actionLabels[status] ?? `Marcar ${statusLabel(status)}`; }
+function isActionDisabled(status) { return status === 'en_uso' && props.request.status === 'en_camino' && !canDeliverTool.value; }
+function actionDisabledMessage(status) {
+  if (status !== 'en_uso' || props.request.status !== 'en_camino') return '';
+  if (props.deliveryDistanceMeters === null || props.deliveryDistanceMeters === undefined) return 'No se puede habilitar la entrega porque falta ubicacion GPS del vehiculo o del tecnico.';
+  return `El vehiculo debe estar a menos de ${props.deliveryRadiusMeters} metros del tecnico para registrar la entrega. Distancia actual: ${deliveryDistanceText.value}.`;
+}
 function formatBogotaDateTime(value) {
   if (!value) return '';
 
@@ -156,7 +164,7 @@ function phoneHref(phone) {
   const cleanPhone = String(phone ?? '').replace(/[^\d+]/g, '');
   return cleanPhone ? `tel:${cleanPhone}` : null;
 }
-function change(status){ commentForm.status = status; commentForm.patch(`/solicitudes/${props.request.id}/status`, { preserveScroll: true }); }
+function change(status){ if (isActionDisabled(status)) return; commentForm.status = status; commentForm.patch(`/solicitudes/${props.request.id}/status`, { preserveScroll: true }); }
 function refreshRequest() {
   if (commentForm.processing) return;
   router.reload({ only: ['request', 'allowedTransitions', 'routeLocations'], preserveScroll: true, preserveState: true });
@@ -395,6 +403,10 @@ onBeforeUnmount(() => { if(window.Echo && channelName) window.Echo.leave(channel
             <div class="rounded bg-slate-50 p-3"><div class="text-slate-500">Herramientas</div><div class="font-bold text-slate-950">{{ request.items?.length ?? 0 }}</div></div>
           </div>
           <p class="mt-4 text-sm text-slate-600">{{ request.observation ?? 'Sin observaciones' }}</p>
+          <div v-if="activeDelay" class="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+            <strong>En demora</strong>
+            <p class="mt-1">{{ activeDelay.reason }}</p>
+          </div>
         </article>
 
         <article class="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
@@ -413,7 +425,10 @@ onBeforeUnmount(() => { if(window.Echo && channelName) window.Echo.leave(channel
         <section class="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
           <h2 class="mb-4 flex items-center gap-2 font-semibold text-[#123f6e]"><Truck class="h-5 w-5" /> Acciones del flujo</h2>
           <div class="grid gap-2">
-            <button v-for="status in allowed" :key="status" @click="change(status)" class="cursor-pointer rounded-md px-4 py-3 font-semibold text-white transition-colors" :class="['rechazada','cancelada'].includes(status) ? 'bg-red-700 hover:bg-red-800' : 'bg-[#123f6e] hover:bg-[#0e2d52]'">{{ actionLabel(status) }}</button>
+            <div v-for="status in allowed" :key="status">
+              <button :disabled="isActionDisabled(status)" @click="change(status)" class="w-full rounded-md px-4 py-3 font-semibold text-white transition-colors" :class="isActionDisabled(status) ? 'cursor-not-allowed bg-slate-300 text-slate-600' : (['rechazada','cancelada'].includes(status) ? 'cursor-pointer bg-red-700 hover:bg-red-800' : 'cursor-pointer bg-[#123f6e] hover:bg-[#0e2d52]')">{{ actionLabel(status) }}</button>
+              <p v-if="isActionDisabled(status)" class="mt-2 rounded-md bg-amber-50 p-3 text-sm text-amber-800">{{ actionDisabledMessage(status) }}</p>
+            </div>
             <p v-if="!allowed.length" class="rounded-md bg-slate-50 p-3 text-sm text-slate-500">No tienes acciones pendientes para este estado.</p>
           </div>
           <p v-for="error in commentForm.errors" :key="error" class="mt-2 text-sm text-red-600">{{ error }}</p>

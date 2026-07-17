@@ -7,7 +7,7 @@ use Illuminate\Console\Command;
 
 class ExpirePendingToolRequests extends Command
 {
-    protected $signature = 'requests:expire-pending {--minutes=30 : Minutos maximos para aceptar una solicitud pendiente}';
+    protected $signature = 'requests:expire-pending {--minutes=12 : Minutos maximos para aceptar una solicitud pendiente}';
 
     protected $description = 'Marca como vencidas las solicitudes pendientes que superan el tiempo de aceptacion.';
 
