@@ -2,8 +2,8 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { AlertTriangle, Bell, Car, CheckCircle, ClipboardList, Clock3, MapPin, MessageCircle, PackageCheck, Users } from '@lucide/vue';
-import { onBeforeUnmount, onMounted } from 'vue';
-const props = defineProps({ stats: Array, recentRequests: Array, role: String, notifications: Array });
+import { onBeforeUnmount, onMounted, ref } from 'vue';
+const props = defineProps({ stats: Array, recentRequests: Array, role: String, notifications: Array, vehicleActivity: Object });
 const icons = { AlertTriangle, Bell, Car, CheckCircle, ClipboardList, Clock3, MapPin, MessageCircle, PackageCheck, Users };
 const statusLabels = { pendiente:'Pendiente', aceptada:'Aceptada', rechazada:'Rechazada', vencida:'Vencida', en_camino:'En camino', entregada:'Entregada', en_uso:'En uso', para_recoger:'Lista para recoger', recogida:'Herramienta recogida', finalizada:'Finalizada', cancelada:'Cancelada' };
 const statusClasses = { pendiente:'bg-amber-50 text-amber-800', aceptada:'bg-blue-50 text-blue-800', en_camino:'bg-sky-50 text-sky-800', entregada:'bg-emerald-50 text-emerald-800', en_uso:'bg-indigo-50 text-indigo-800', para_recoger:'bg-orange-50 text-orange-800', recogida:'bg-slate-100 text-slate-800', finalizada:'bg-emerald-100 text-emerald-900', rechazada:'bg-red-50 text-red-800', vencida:'bg-orange-100 text-orange-900', cancelada:'bg-red-50 text-red-800' };
@@ -22,13 +22,27 @@ const iconColors = {
 let dashboardRefreshTimer = null;
 let dashboardChannelName = null;
 let refreshingDashboard = false;
+const activityFrom = ref(props.vehicleActivity?.filters?.from ?? '');
+const activityTo = ref(props.vehicleActivity?.filters?.to ?? '');
+
+function applyActivityFilters() {
+  router.get('/dashboard', {
+    activity_from: activityFrom.value,
+    activity_to: activityTo.value,
+  }, {
+    preserveScroll: true,
+    preserveState: true,
+    replace: true,
+    only: ['stats', 'vehicleActivity'],
+  });
+}
 
 function refreshDashboard() {
   if (refreshingDashboard) return;
 
   refreshingDashboard = true;
   router.reload({
-    only: ['stats', 'recentRequests', 'notifications'],
+    only: ['stats', 'recentRequests', 'notifications', 'vehicleActivity'],
     preserveScroll: true,
     preserveState: true,
     onFinish: () => {
@@ -62,6 +76,48 @@ onBeforeUnmount(() => {
       <Link v-for="card in stats" :key="card.label" :href="card.route || '#'" class="rounded-md border border-slate-200 bg-white p-5 shadow-sm transition-colors hover:bg-[#edf3fa] cursor-pointer">
         <div class="flex items-center justify-between"><div><p class="text-sm font-medium text-slate-500">{{ card.label }}</p><p class="mt-2 text-3xl font-semibold text-slate-950">{{ card.value }}</p></div><span class="grid h-11 w-11 place-items-center rounded-md" :class="iconColors[card.icon] ?? 'bg-[#e6eef7] text-[#123f6e]'"><component :is="icons[card.icon] ?? ClipboardList" class="h-6 w-6" /></span></div>
       </Link>
+    </section>
+    <section v-if="vehicleActivity && role === 'Administrador'" class="mt-6 rounded-md border border-slate-200 bg-white p-5 shadow-sm">
+      <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <h2 class="text-lg font-semibold text-[#123f6e]">Actividad GPS de vehiculos</h2>
+          <p class="mt-1 text-sm text-slate-500">Movimiento calculado entre {{ vehicleActivity.filters.from_datetime }} y {{ vehicleActivity.filters.to_datetime }}.</p>
+        </div>
+        <form class="grid gap-3 sm:grid-cols-[1fr_1fr_auto_auto] lg:min-w-[620px]" @submit.prevent="applyActivityFilters">
+          <label class="text-sm font-medium text-slate-600">
+            Desde
+            <input v-model="activityFrom" type="date" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" />
+          </label>
+          <label class="text-sm font-medium text-slate-600">
+            Hasta
+            <input v-model="activityTo" type="date" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" />
+          </label>
+          <button class="cursor-pointer rounded-md bg-[#123f6e] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#0e2d52] sm:self-end">Filtrar</button>
+          <Link :href="vehicleActivity.detail_url" class="rounded-md border border-slate-300 px-4 py-2 text-center text-sm font-semibold text-[#123f6e] transition-colors hover:bg-slate-50 sm:self-end">Ver detalle</Link>
+        </form>
+      </div>
+      <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+        <Link :href="`${vehicleActivity.detail_url}&status=moving`" class="rounded-md border border-slate-200 bg-slate-50 p-4 transition-colors hover:bg-[#edf3fa]">
+          <p class="text-sm font-medium text-slate-500">En movimiento</p>
+          <p class="mt-2 text-2xl font-bold text-slate-950">{{ vehicleActivity.summary.moving_count }}</p>
+        </Link>
+        <Link :href="`${vehicleActivity.detail_url}&status=stopped`" class="rounded-md border border-slate-200 bg-slate-50 p-4 transition-colors hover:bg-[#edf3fa]">
+          <p class="text-sm font-medium text-slate-500">Sin movimiento</p>
+          <p class="mt-2 text-2xl font-bold text-slate-950">{{ vehicleActivity.summary.stopped_count }}</p>
+        </Link>
+        <div class="rounded-md border border-slate-200 bg-slate-50 p-4">
+          <p class="text-sm font-medium text-slate-500">GPS reciente</p>
+          <p class="mt-2 text-2xl font-bold text-slate-950">{{ vehicleActivity.summary.gps_fresh_count }}</p>
+        </div>
+        <div class="rounded-md border border-slate-200 bg-slate-50 p-4">
+          <p class="text-sm font-medium text-slate-500">Sin GPS reciente</p>
+          <p class="mt-2 text-2xl font-bold text-slate-950">{{ vehicleActivity.summary.gps_stale_count }}</p>
+        </div>
+        <div class="rounded-md border border-slate-200 bg-slate-50 p-4">
+          <p class="text-sm font-medium text-slate-500">Distancia estimada</p>
+          <p class="mt-2 text-2xl font-bold text-slate-950">{{ vehicleActivity.summary.distance_km }} km</p>
+        </div>
+      </div>
     </section>
     <section class="mt-6 grid gap-6 xl:grid-cols-[1.2fr_.8fr]">
       <div class="rounded-md border border-slate-200 bg-white p-5 shadow-sm">

@@ -5,6 +5,7 @@ use App\Models\GpsProvider;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Services\VehicleActivityService;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -79,6 +80,16 @@ class VehicleController extends Controller
                 'from' => $from->format('Y-m-d\TH:i'),
                 'to' => $to->format('Y-m-d\TH:i'),
             ],
+        ]);
+    }
+
+    public function activity(Request $request, VehicleActivityService $activityService)
+    {
+        [$from, $to] = $activityService->rangeFromRequest($request);
+
+        return Inertia::render('Vehicles/Activity', [
+            'activity' => $activityService->summary($from, $to),
+            'filters' => $request->only('from', 'to', 'status', 'search'),
         ]);
     }
 
