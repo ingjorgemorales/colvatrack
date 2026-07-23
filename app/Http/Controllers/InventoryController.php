@@ -24,6 +24,7 @@ class InventoryController extends Controller
             ->with('item.category');
 
         $vehicles = Vehicle::with(['driver', 'inventory' => $activeInventory])
+            ->where('status', 'active')
             ->when($user->hasRole('Conductor'), fn($q) => $q->where('driver_id', $user->id))
             ->when($search, fn($q) => $q->where(function ($q) use ($search) {
                 $q->where('plate', 'like', "%{$search}%")
@@ -129,7 +130,7 @@ class InventoryController extends Controller
     {
         abort_unless($request->user()->hasRole('Administrador'), 403);
         $data = $request->validate([
-            'vehicle_id' => ['required', 'exists:vehicles,id'],
+            'vehicle_id' => ['required', Rule::exists('vehicles', 'id')->where('status', 'active')],
             'inventory_item_id' => ['required', Rule::exists('inventory_items', 'id')->where('status', 'active')],
             'quantity_total' => ['required', 'integer', 'min:0'],
             'quantity_available' => ['nullable', 'integer', 'min:0'],
@@ -140,5 +141,22 @@ class InventoryController extends Controller
         abort_if((int) $data['quantity_available'] > (int) $data['quantity_total'], 422, 'La cantidad disponible no puede superar la total.');
         $service->setStock($data['vehicle_id'], $data['inventory_item_id'], (int) $data['quantity_total'], (int) $data['quantity_available'], $request->user()->id);
         return back()->with('success', 'Inventario actualizado.');
+    }
+
+    public function removeStock(Request $request, InventoryService $service)
+    {
+        abort_unless($request->user()->hasRole('Administrador'), 403);
+        $data = $request->validate([
+            'vehicle_id' => ['required', Rule::exists('vehicles', 'id')->where('status', 'active')],
+            'inventory_item_id' => ['required', Rule::exists('inventory_items', 'id')->where('status', 'active')],
+        ]);
+
+        try {
+            $service->removeFromVehicle((int) $data['vehicle_id'], (int) $data['inventory_item_id'], $request->user()->id);
+        } catch (\InvalidArgumentException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Herramienta retirada del vehiculo.');
     }
 }

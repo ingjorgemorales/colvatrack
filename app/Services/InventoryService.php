@@ -27,6 +27,47 @@ class InventoryService
         });
     }
 
+    public function removeFromVehicle(int $vehicleId, int $itemId, ?int $userId = null): void
+    {
+        DB::transaction(function () use ($vehicleId, $itemId, $userId) {
+            $row = VehicleInventory::where('vehicle_id', $vehicleId)
+                ->where('inventory_item_id', $itemId)
+                ->with(['vehicle', 'item'])
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ((int) $row->quantity_reserved > 0 || (int) $row->quantity_delivered > 0) {
+                throw new InvalidArgumentException('No se puede quitar esta herramienta porque tiene cantidades reservadas o entregadas en una solicitud activa.');
+            }
+
+            $vehicle = $row->vehicle;
+            $itemName = $row->item?->name ?? 'Herramienta';
+            $previous = (int) $row->quantity_available;
+
+            InventoryMovement::create([
+                'vehicle_id' => $row->vehicle_id,
+                'inventory_item_id' => $row->inventory_item_id,
+                'movement_type' => 'removed',
+                'quantity' => (int) $row->quantity_total,
+                'previous_available' => $previous,
+                'new_available' => 0,
+                'created_by' => $userId,
+                'comment' => 'Herramienta retirada del inventario del vehiculo',
+                'created_at' => now(),
+            ]);
+
+            $row->delete();
+
+            if ($vehicle?->driver_id) {
+                $this->notifications->create($vehicle->driver_id, 'Inventario actualizado', $itemName.' fue retirada del inventario del vehiculo '.$vehicle->plate.'.', 'info');
+            }
+
+            if ($vehicle) {
+                try { broadcast(new InventoryUpdated($vehicle))->toOthers(); } catch (\Throwable $e) { /* WebSocket no disponible */ }
+            }
+        });
+    }
+
     public function reserve(int $vehicleId, int $itemId, int $quantity, ?int $requestId = null): VehicleInventory
     {
         return DB::transaction(function () use ($vehicleId, $itemId, $quantity, $requestId) {

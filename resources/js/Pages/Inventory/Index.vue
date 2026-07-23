@@ -1,7 +1,7 @@
 <script setup>
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
-import { History, Plus, Save, Search, Wrench, X } from '@lucide/vue';
+import { History, Plus, Save, Search, Trash2, Wrench, X } from '@lucide/vue';
 import { ref } from 'vue';
 
 const props = defineProps({
@@ -61,6 +61,25 @@ function assignToVehicle(vehicle) {
     .transform(data => ({ ...data, quantity_available: data.quantity_total }))
     .patch('/inventario/stock', { preserveScroll: true, onSuccess: () => addForm.reset() });
 }
+
+function canRemove(row) {
+  return Number(row.quantity_reserved ?? 0) === 0 && Number(row.quantity_delivered ?? 0) === 0;
+}
+
+function removeFromVehicle(vehicle, row) {
+  if (!canRemove(row)) return;
+
+  const toolName = row.item?.name ?? 'esta herramienta';
+  if (!confirm(`Vas a quitar "${toolName}" del vehiculo ${vehicle.plate}.\n\nEsto elimina la herramienta del inventario de este vehiculo y dejara un movimiento historico.\n\nQuieres continuar?`)) return;
+
+  router.delete('/inventario/stock', {
+    data: {
+      vehicle_id: vehicle.id,
+      inventory_item_id: row.inventory_item_id,
+    },
+    preserveScroll: true,
+  });
+}
 </script>
 
 <template>
@@ -109,7 +128,7 @@ function assignToVehicle(vehicle) {
                   <th>Disponible</th>
                   <th>Reservada</th>
                   <th>Entregada</th>
-                  <th v-if="canManageCatalog">Actualizar</th>
+                  <th v-if="canManageCatalog">Gestionar</th>
                 </tr>
               </thead>
               <tbody>
@@ -123,13 +142,24 @@ function assignToVehicle(vehicle) {
                   <td>{{ row.quantity_reserved }}</td>
                   <td>{{ row.quantity_delivered }}</td>
                   <td v-if="canManageCatalog">
-                    <form class="flex items-center gap-1" @submit.prevent="saveStock(formFor(vehicle.id, row.inventory_item_id, row))">
-                      <input v-model="formFor(vehicle.id, row.inventory_item_id, row).quantity_total" type="number" class="w-16 rounded border border-slate-300 px-2 py-2 text-xs" title="Total" />
-                      <input v-model="formFor(vehicle.id, row.inventory_item_id, row).quantity_available" type="number" class="w-16 rounded border border-slate-300 px-2 py-2 text-xs" title="Disponible" />
-                      <button class="cursor-pointer rounded bg-[#123f6e] p-2 text-white transition-colors hover:bg-[#0e2d52]">
-                        <Save class="h-4 w-4" />
+                    <div class="flex flex-wrap items-center gap-1">
+                      <form class="flex items-center gap-1" @submit.prevent="saveStock(formFor(vehicle.id, row.inventory_item_id, row))">
+                        <input v-model="formFor(vehicle.id, row.inventory_item_id, row).quantity_total" type="number" class="w-16 rounded border border-slate-300 px-2 py-2 text-xs" title="Total" />
+                        <input v-model="formFor(vehicle.id, row.inventory_item_id, row).quantity_available" type="number" class="w-16 rounded border border-slate-300 px-2 py-2 text-xs" title="Disponible" />
+                        <button class="cursor-pointer rounded bg-[#123f6e] p-2 text-white transition-colors hover:bg-[#0e2d52]" title="Guardar cantidades">
+                          <Save class="h-4 w-4" />
+                        </button>
+                      </form>
+                      <button
+                        type="button"
+                        @click="removeFromVehicle(vehicle, row)"
+                        class="rounded border border-red-200 p-2 text-red-700 transition-colors"
+                        :class="canRemove(row) ? 'cursor-pointer hover:bg-red-50' : 'cursor-not-allowed opacity-40'"
+                        :title="canRemove(row) ? 'Quitar herramienta del vehiculo' : 'No se puede quitar mientras tenga cantidad reservada o entregada'"
+                      >
+                        <Trash2 class="h-4 w-4" />
                       </button>
-                    </form>
+                    </div>
                   </td>
                 </tr>
                 <tr v-if="!vehicle.inventory?.length">
@@ -151,13 +181,24 @@ function assignToVehicle(vehicle) {
                 <div><span class="text-xs text-slate-500">Reservada:</span><span class="ml-1 font-semibold">{{ row.quantity_reserved }}</span></div>
                 <div><span class="text-xs text-slate-500">Entregada:</span><span class="ml-1 font-semibold">{{ row.quantity_delivered }}</span></div>
               </div>
-              <form v-if="canManageCatalog" class="flex items-center gap-1" @submit.prevent="saveStock(formFor(vehicle.id, row.inventory_item_id, row))">
-                <input v-model="formFor(vehicle.id, row.inventory_item_id, row).quantity_total" type="number" class="w-14 rounded border border-slate-300 px-2 py-2 text-xs" title="Total" />
-                <input v-model="formFor(vehicle.id, row.inventory_item_id, row).quantity_available" type="number" class="w-14 rounded border border-slate-300 px-2 py-2 text-xs" title="Disponible" />
-                <button class="cursor-pointer rounded bg-[#123f6e] p-2 text-white transition-colors hover:bg-[#0e2d52]">
-                  <Save class="h-4 w-4" />
+              <div v-if="canManageCatalog" class="flex flex-wrap items-center gap-1">
+                <form class="flex items-center gap-1" @submit.prevent="saveStock(formFor(vehicle.id, row.inventory_item_id, row))">
+                  <input v-model="formFor(vehicle.id, row.inventory_item_id, row).quantity_total" type="number" class="w-14 rounded border border-slate-300 px-2 py-2 text-xs" title="Total" />
+                  <input v-model="formFor(vehicle.id, row.inventory_item_id, row).quantity_available" type="number" class="w-14 rounded border border-slate-300 px-2 py-2 text-xs" title="Disponible" />
+                  <button class="cursor-pointer rounded bg-[#123f6e] p-2 text-white transition-colors hover:bg-[#0e2d52]" title="Guardar cantidades">
+                    <Save class="h-4 w-4" />
+                  </button>
+                </form>
+                <button
+                  type="button"
+                  @click="removeFromVehicle(vehicle, row)"
+                  class="rounded border border-red-200 p-2 text-red-700 transition-colors"
+                  :class="canRemove(row) ? 'cursor-pointer hover:bg-red-50' : 'cursor-not-allowed opacity-40'"
+                  :title="canRemove(row) ? 'Quitar herramienta del vehiculo' : 'No se puede quitar mientras tenga cantidad reservada o entregada'"
+                >
+                  <Trash2 class="h-4 w-4" />
                 </button>
-              </form>
+              </div>
             </div>
             <p v-if="!vehicle.inventory?.length" class="py-4 text-center text-sm text-slate-500">Sin inventario asignado.</p>
           </div>

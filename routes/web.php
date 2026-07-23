@@ -51,6 +51,7 @@ Route::middleware(['auth', 'must.change.password', 'audit'])->group(function () 
     Route::patch('/inventario/items/{item}', [InventoryController::class, 'updateItem'])->name('inventario.items.update')->middleware('role:Administrador');
     Route::patch('/inventario/items/{item}/status', [InventoryController::class, 'toggleItemStatus'])->name('inventario.items.status')->middleware('role:Administrador');
     Route::patch('/inventario/stock', [InventoryController::class, 'updateStock'])->name('inventario.stock.update')->middleware('permission:inventario,editar');
+    Route::delete('/inventario/stock', [InventoryController::class, 'removeStock'])->name('inventario.stock.remove')->middleware('permission:inventario,editar');
 
     Route::get('/solicitudes', [ToolRequestWebController::class, 'index'])->name('solicitudes.index')->middleware('permission:solicitudes,ver');
     Route::get('/solicitudes/create', [ToolRequestWebController::class, 'create'])->name('solicitudes.create')->middleware(['permission:solicitudes,crear', 'location.enabled']);
