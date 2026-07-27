@@ -8,6 +8,8 @@ const props = defineProps({ vehicles: Array, technicians: Array });
 const page = usePage();
 const perms = page.props.auth?.permissions ?? [];
 const can = (module, action = 'ver') => perms.includes('*') || perms.includes(`${module}.${action}`);
+const userRole = computed(() => page.props.auth?.user?.role?.name ?? '');
+const isTechnician = computed(() => userRole.value === 'Tecnico');
 const mapEl = ref(null);
 const vehicles = ref(props.vehicles ?? []);
 const technicians = ref(props.technicians ?? []);
@@ -15,7 +17,8 @@ const query = ref('');
 const status = ref('todos');
 const availability = ref('todos');
 const selectedTechnicianId = ref('');
-const distance = ref('');
+const radiusOptions = [500, 1000, 2000, 3000];
+const distance = ref(page.props.auth?.user?.role?.name === 'Tecnico' ? '3000' : '');
 const lastRefresh = ref(null);
 const refreshing = ref(false);
 let map;
@@ -39,7 +42,7 @@ const filtered = computed(() => vehicles.value
     || (availability.value === 'ocupados' ? Boolean(v.is_occupied) : false))
   .filter(v => {
     if (!radiusMeters.value) return true;
-    if (!radiusTechnicians.value.length) return true;
+    if (!radiusTechnicians.value.length) return false;
     return radiusTechnicians.value.some(t => distanceBetween(t, v) <= radiusMeters.value);
   })
 );
@@ -50,7 +53,9 @@ const technicianCount = computed(() => technicians.value.length);
 const lastRefreshLabel = computed(() => lastRefresh.value ? lastRefresh.value.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'Pendiente');
 const radiusLabel = computed(() => {
   if (!radiusMeters.value) return 'Sin filtro por radio';
+  if (!radiusTechnicians.value.length) return 'Sin tecnico con ubicacion para aplicar radio';
   if (selectedTechnician.value) return `${filtered.value.length} vehiculos a ${radiusMeters.value} m de ${selectedTechnician.value.name}`;
+  if (isTechnician.value) return `${filtered.value.length} vehiculos a ${radiusMeters.value} m de tu ubicacion`;
   return `${filtered.value.length} vehiculos a ${radiusMeters.value} m de cualquier tecnico`;
 });
 
@@ -274,8 +279,11 @@ watch([query, status, availability, selectedTechnicianId, distance], () => rende
       <input v-model="query" class="rounded-md border border-slate-200 bg-[#e9eef8] px-5 py-4 outline-none focus:border-[#123f6e]" placeholder="Buscar placa o conductor" />
       <select v-model="status" class="rounded-md border border-slate-200 bg-[#e9eef8] px-5 py-4 outline-none focus:border-[#123f6e]"><option value="todos">Todos los estados</option><option value="movimiento">GPS con datos recientes</option><option value="detenido">GPS sin datos recientes</option></select>
       <select v-model="availability" class="rounded-md border border-slate-200 bg-[#e9eef8] px-5 py-4 outline-none focus:border-[#123f6e]"><option value="todos">Todos</option><option value="disponibles">Disponibles con herramientas</option><option value="ocupados">Ocupados</option></select>
-      <select v-model="selectedTechnicianId" class="rounded-md border border-slate-200 bg-[#e9eef8] px-5 py-4 outline-none focus:border-[#123f6e]"><option value="">Todos los tecnicos</option><option v-for="t in technicians" :key="t.id" :value="t.id">{{ t.name }} {{ t.last_name ?? '' }}</option></select>
-      <input v-model="distance" type="number" min="1" class="rounded-md border border-slate-200 bg-[#e9eef8] px-5 py-4 outline-none focus:border-[#16a34a]" placeholder="Radio metros, ej. 500" />
+      <select v-model="selectedTechnicianId" class="rounded-md border border-slate-200 bg-[#e9eef8] px-5 py-4 outline-none focus:border-[#123f6e]"><option value="">{{ isTechnician ? 'Mi ubicacion' : 'Todos los tecnicos' }}</option><option v-for="t in technicians" :key="t.id" :value="t.id">{{ t.name }} {{ t.last_name ?? '' }}</option></select>
+      <select v-model="distance" class="rounded-md border border-slate-200 bg-[#e9eef8] px-5 py-4 outline-none focus:border-[#16a34a]">
+        <option v-if="!isTechnician" value="">Sin radio</option>
+        <option v-for="option in radiusOptions" :key="option" :value="String(option)">{{ option }} metros</option>
+      </select>
     </section>
 
     <section class="mb-4 flex flex-wrap items-center gap-3 text-sm text-slate-600">
