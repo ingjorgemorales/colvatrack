@@ -16,6 +16,7 @@ use InvalidArgumentException;
 class ToolRequestService
 {
     private const DELIVERY_RADIUS_METERS = 50;
+    private const TECHNICIAN_REQUEST_RADIUS_METERS = 3000;
 
     public function __construct(private InventoryService $inventory, private NotificationService $notifications, private MailNotificationService $mail) {}
 
@@ -34,6 +35,12 @@ class ToolRequestService
             }
 
             $vehicle = Vehicle::whereKey($data['vehicle_id'])->lockForUpdate()->firstOrFail();
+            if ($vehicle->status !== 'active') {
+                throw new InvalidArgumentException('El vehiculo '.$vehicle->plate.' no esta activo para crear solicitudes.');
+            }
+            if ($enforceSingleActiveTechnician) {
+                $this->assertVehicleInsideTechnicianRequestRadius($vehicle, $data);
+            }
             $activeRequest = ToolRequest::where('vehicle_id', $vehicle->id)->activeForVehicle()->lockForUpdate()->first();
             if ($activeRequest) {
                 throw new InvalidArgumentException('El vehiculo '.$vehicle->plate.' no esta disponible porque tiene la solicitud #'.$activeRequest->id.' en estado '.$activeRequest->status.'.');
@@ -291,6 +298,24 @@ class ToolRequestService
 
         if ($distance > self::DELIVERY_RADIUS_METERS) {
             throw new InvalidArgumentException('El vehiculo debe estar a menos de '.self::DELIVERY_RADIUS_METERS.' metros del tecnico para registrar la entrega. Distancia actual: '.$distance.' metros.');
+        }
+    }
+
+    private function assertVehicleInsideTechnicianRequestRadius(Vehicle $vehicle, array $data): void
+    {
+        if (! $vehicle->current_latitude || ! $vehicle->current_longitude || ! ($data['technician_latitude'] ?? null) || ! ($data['technician_longitude'] ?? null)) {
+            throw new InvalidArgumentException('No se puede crear la solicitud porque falta ubicacion GPS del tecnico o del vehiculo.');
+        }
+
+        $distance = $this->distanceMeters(
+            (float) $vehicle->current_latitude,
+            (float) $vehicle->current_longitude,
+            (float) $data['technician_latitude'],
+            (float) $data['technician_longitude']
+        );
+
+        if ($distance > self::TECHNICIAN_REQUEST_RADIUS_METERS) {
+            throw new InvalidArgumentException('Solo puedes solicitar vehiculos ubicados a maximo 3 kilometros de tu ubicacion. Distancia actual: '.round($distance / 1000, 2).' km.');
         }
     }
 

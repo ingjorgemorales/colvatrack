@@ -2,11 +2,12 @@
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { AlertTriangle, ArrowLeft, Eye, MapPin, Navigation, Plus, Trash2 } from '@lucide/vue';
-import { computed, ref, watch } from 'vue';
+import { computed, watch } from 'vue';
 
-const props = defineProps({ vehicles: Array, selectedVehicleId: Number, userLocation: Object, activeTechnicianRequest: Object });
+const props = defineProps({ vehicles: Array, selectedVehicleId: Number, userLocation: Object, activeTechnicianRequest: Object, requestRadiusMeters: Number });
 const form = useForm({ vehicle_id: props.selectedVehicleId ?? '', priority: 'normal', technician_address: '', observation: '', items: [] });
-const nearbyRadius = ref(500);
+const requestRadiusMeters = computed(() => props.requestRadiusMeters ?? 3000);
+const requestRadiusText = computed(() => `${(Number(requestRadiusMeters.value) / 1000).toFixed(0)} km`);
 
 const hasActiveTechnicianRequest = computed(() => Boolean(props.activeTechnicianRequest));
 const vehicle = computed(() => props.vehicles.find(v => Number(v.id) === Number(form.vehicle_id)) ?? null);
@@ -15,7 +16,7 @@ const hasUserLocation = computed(() => Boolean(props.userLocation?.latitude && p
 const availableItems = computed(() => selectedIsOccupied.value ? [] : (vehicle.value?.inventory?.filter(i => Number(i.quantity_available) > 0) ?? []));
 const nearbyVehicles = computed(() => props.vehicles
   .filter(v => v.distance_meters !== null && v.distance_meters !== undefined)
-  .filter(v => !nearbyRadius.value || Number(v.distance_meters) <= Number(nearbyRadius.value))
+  .filter(v => Number(v.distance_meters) <= Number(requestRadiusMeters.value))
   .slice(0, 8)
 );
 const nearestVehicle = computed(() => nearbyVehicles.value.find(v => !v.is_occupied && v.has_available_inventory) ?? nearbyVehicles.value.find(v => !v.is_occupied) ?? null);
@@ -54,12 +55,9 @@ function selectVehicle(vehicleId) {
         <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <h2 class="flex items-center gap-2 text-lg font-bold text-emerald-800"><Navigation class="h-5 w-5" /> Vehiculos cercanos al tecnico</h2>
-            <p class="mt-1 text-sm text-emerald-900/80">La lista se ordena por distancia desde tu ultima ubicacion sincronizada.</p>
+            <p class="mt-1 text-sm text-emerald-900/80">Solo puedes seleccionar vehiculos dentro de un radio de {{ requestRadiusText }} desde tu ultima ubicacion sincronizada.</p>
           </div>
-          <label class="grid gap-1 text-sm font-semibold text-emerald-900">
-            <span>Radio metros</span>
-            <input v-model="nearbyRadius" type="number" min="1" class="w-44 rounded-md border border-emerald-300 bg-white px-3 py-2 outline-none focus:border-emerald-700" />
-          </label>
+          <div class="rounded-md bg-white px-4 py-2 text-sm font-bold text-emerald-800 shadow-sm">Radio fijo: {{ requestRadiusText }}</div>
         </div>
 
         <div v-if="!hasUserLocation" class="mt-4 rounded-md bg-white p-3 text-sm text-amber-700">No hay ubicacion vigente del tecnico. Activa la ubicacion para calcular vehiculos cercanos.</div>
@@ -78,7 +76,7 @@ function selectVehicle(vehicleId) {
           </button>
         </div>
 
-        <div v-else class="mt-4 rounded-md bg-white p-3 text-sm text-slate-600">No hay vehiculos dentro de {{ nearbyRadius }} m. Aumenta el radio para ver mas opciones.</div>
+        <div v-else class="mt-4 rounded-md bg-white p-3 text-sm text-slate-600">No hay vehiculos disponibles dentro de {{ requestRadiusText }} desde tu ubicacion.</div>
 
         <button v-if="nearestVehicle" type="button" :disabled="hasActiveTechnicianRequest" @click="selectVehicle(nearestVehicle.id)" class="mt-4 rounded-md bg-emerald-700 px-4 py-2 text-sm font-bold text-white transition-colors" :class="hasActiveTechnicianRequest ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-emerald-800'">Usar mas cercano: {{ nearestVehicle.plate }} ({{ formatDistance(nearestVehicle.distance_meters) }})</button>
       </section>

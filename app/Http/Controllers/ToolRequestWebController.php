@@ -12,6 +12,8 @@ use InvalidArgumentException;
 
 class ToolRequestWebController extends Controller
 {
+    private const TECHNICIAN_REQUEST_RADIUS_METERS = 3000;
+
     public function index(Request $request)
     {
         $user = auth()->user();
@@ -70,14 +72,18 @@ class ToolRequestWebController extends Controller
                 $vehicle->setAttribute('availability_status', $vehicle->activeToolRequest ? 'ocupado' : 'disponible');
                 return $vehicle;
             })
+            ->when($user->hasRole('Tecnico'), fn ($vehicles) => $vehicles
+                ->filter(fn (Vehicle $vehicle) => $vehicle->distance_meters !== null && (int) $vehicle->distance_meters <= self::TECHNICIAN_REQUEST_RADIUS_METERS))
             ->sortBy(fn (Vehicle $vehicle) => $vehicle->distance_meters ?? PHP_INT_MAX)
             ->values();
+        $selectedVehicleId = $request->integer('vehicle_id') ?: null;
 
         return Inertia::render('Requests/Form', [
             'vehicles' => $vehicles,
-            'selectedVehicleId' => $request->integer('vehicle_id') ?: null,
+            'selectedVehicleId' => $selectedVehicleId && $vehicles->contains('id', $selectedVehicleId) ? $selectedVehicleId : null,
             'userLocation' => $userLocation,
             'activeTechnicianRequest' => $activeTechnicianRequest,
+            'requestRadiusMeters' => $user->hasRole('Tecnico') ? self::TECHNICIAN_REQUEST_RADIUS_METERS : null,
         ]);
     }
 
