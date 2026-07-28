@@ -12,12 +12,15 @@ use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
+    private const TECHNICIAN_NEARBY_RADIUS_METERS = 3000;
+
     public function __invoke()
     {
         $user = auth()->user()->load('role');
         $role = $user->role?->name ?? 'Usuario';
 
         if ($user->hasRole('Tecnico')) {
+            $nearbyVehicles = $this->nearbyVehiclesCount($user);
             $stats = [
                 ['label' => 'Mis pendientes', 'value' => ToolRequest::where('technician_id', $user->id)->where('status', 'pendiente')->count(), 'icon' => 'ClipboardList', 'route' => '/solicitudes?status=pendiente'],
                 ['label' => 'En demora', 'value' => ToolRequestDelay::where('status', 'active')->whereHas('request', fn($q) => $q->where('technician_id', $user->id))->count(), 'icon' => 'AlertTriangle', 'route' => '/solicitudes?delay=active'],
@@ -25,7 +28,7 @@ class DashboardController extends Controller
                 ['label' => 'En curso', 'value' => ToolRequest::where('technician_id', $user->id)->whereIn('status', ['en_camino','en_uso','para_recoger','recogida'])->count(), 'icon' => 'MapPin', 'route' => '/solicitudes'],
                 ['label' => 'Finalizadas', 'value' => ToolRequest::where('technician_id', $user->id)->where('status', 'finalizada')->count(), 'icon' => 'PackageCheck', 'route' => '/solicitudes?status=finalizada'],
                 ['label' => 'Mensajes sin leer', 'value' => ChatMessage::whereHas('chat.request', fn($q) => $q->where('technician_id', $user->id))->where('sender_id', '!=', $user->id)->whereNull('read_at')->count(), 'icon' => 'MessageCircle', 'route' => '/solicitudes'],
-                ['label' => 'Vehiculos cercanos', 'value' => Vehicle::where('status', 'active')->count(), 'icon' => 'Car', 'route' => '/vehiculos'],
+                ['label' => 'Vehiculos cercanos', 'value' => $nearbyVehicles, 'icon' => 'Car', 'route' => '/mapa'],
             ];
             $recentRequests = ToolRequest::with(['vehicle','technician','driver','activeDelays'])->where('technician_id', $user->id)->latest()->limit(8)->get();
         } elseif ($user->hasRole('Conductor')) {
@@ -60,5 +63,36 @@ class DashboardController extends Controller
             'role' => $role,
             'notifications' => Notification::where('user_id', $user->id)->latest()->limit(5)->get(),
         ]);
+    }
+
+    private function nearbyVehiclesCount(User $user): int
+    {
+        if (! $user->current_latitude || ! $user->current_longitude) {
+            return 0;
+        }
+
+        return Vehicle::where('status', 'active')
+            ->whereNotNull('current_latitude')
+            ->whereNotNull('current_longitude')
+            ->get(['id', 'current_latitude', 'current_longitude'])
+            ->filter(fn (Vehicle $vehicle) => $this->distanceMeters(
+                (float) $user->current_latitude,
+                (float) $user->current_longitude,
+                (float) $vehicle->current_latitude,
+                (float) $vehicle->current_longitude
+            ) <= self::TECHNICIAN_NEARBY_RADIUS_METERS)
+            ->count();
+    }
+
+    private function distanceMeters(float $lat1, float $lng1, float $lat2, float $lng2): int
+    {
+        $radius = 6371000;
+        $aLat = deg2rad($lat1);
+        $bLat = deg2rad($lat2);
+        $deltaLat = deg2rad($lat2 - $lat1);
+        $deltaLng = deg2rad($lng2 - $lng1);
+        $a = sin($deltaLat / 2) ** 2 + cos($aLat) * cos($bLat) * sin($deltaLng / 2) ** 2;
+
+        return (int) round($radius * 2 * atan2(sqrt($a), sqrt(1 - $a)));
     }
 }
