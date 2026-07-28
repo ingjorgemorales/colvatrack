@@ -72,7 +72,7 @@ Route::middleware(['auth', 'must.change.password', 'audit'])->group(function () 
 
     Route::get('/reportes', [ReportController::class, 'index'])->name('reportes.index')->middleware('permission:reportes,ver');
     Route::get('/reportes/export', [ReportController::class, 'export'])->name('reportes.export')->middleware('permission:reportes,exportar');
-    Route::get('/auditoria', [AuditController::class, 'index'])->name('auditoria.index')->middleware(['role:Superadministrador', 'permission:auditoria,ver']);
+    Route::get('/auditoria', [AuditController::class, 'index'])->name('auditoria.index')->middleware('permission:auditoria,ver');
     Route::get('/notificaciones', [NotificationWebController::class, 'index'])->name('notificaciones.index')->middleware('permission:notificaciones,ver');
     Route::patch('/notificaciones/{notification}/read', [NotificationWebController::class, 'read'])->name('notificaciones.read')->middleware('permission:notificaciones,editar');
     Route::patch('/notificaciones/read-all', [NotificationWebController::class, 'readAll'])->name('notificaciones.read-all')->middleware('permission:notificaciones,editar');
