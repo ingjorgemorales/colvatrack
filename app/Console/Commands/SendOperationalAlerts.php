@@ -18,6 +18,12 @@ class SendOperationalAlerts extends Command
     protected $signature = 'alerts:operational {--dry-run : Muestra las alertas que se generarian sin guardarlas ni enviar correos}';
     protected $description = 'Genera alertas operativas por GPS vencido, solicitudes represadas e inventario bajo.';
 
+    private const DAILY_SUMMARY_TYPES = [
+        'gps_stale_summary',
+        'request_delay_summary',
+        'low_stock_summary',
+    ];
+
     private array $alertConfig = [];
 
     public function handle(NotificationService $notifications, MailNotificationService $mail): int
@@ -119,6 +125,10 @@ class SendOperationalAlerts extends Command
         }
 
         foreach ($admins as $admin) {
+            if (in_array($type, self::DAILY_SUMMARY_TYPES, true) && $this->updateDailySummary($admin->id, $title, $message, $type, $data)) {
+                continue;
+            }
+
             $notifications->create($admin->id, $title, $message, $type, $data);
             if ($this->emailEnabled()) {
                 $mail->sendPlain($admin->email, $title.' - ColvaTrack', $message);
@@ -127,6 +137,35 @@ class SendOperationalAlerts extends Command
         }
 
         return $created;
+    }
+
+    private function updateDailySummary(int $userId, string $title, string $message, string $type, array $data): bool
+    {
+        $today = now()->toDateString();
+        $notification = Notification::where('user_id', $userId)
+            ->where('type', $type)
+            ->whereDate('created_at', $today)
+            ->latest('id')
+            ->first();
+
+        if (! $notification) {
+            return false;
+        }
+
+        Notification::where('user_id', $userId)
+            ->where('type', $type)
+            ->whereDate('created_at', $today)
+            ->where('id', '!=', $notification->id)
+            ->delete();
+
+        $notification->update([
+            'title' => $title,
+            'message' => $message,
+            'data_json' => $data ?: null,
+            'updated_at' => now(),
+        ]);
+
+        return true;
     }
 
     private function loadAlertConfig(): array
