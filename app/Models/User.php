@@ -62,7 +62,7 @@ class User extends Authenticatable
 
     public function canAccess(string $module, string $action = 'ver'): bool
     {
-        if ($this->hasRole('Administrador')) {
+        if ($this->hasRole('Superadministrador')) {
             return true;
         }
 

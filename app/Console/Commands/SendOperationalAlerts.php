@@ -29,7 +29,7 @@ class SendOperationalAlerts extends Command
             return self::SUCCESS;
         }
 
-        $admins = User::whereHas('role', fn ($query) => $query->where('name', 'Administrador'))->where('status', 'active')->get();
+        $admins = User::whereHas('role', fn ($query) => $query->whereIn('name', ['Superadministrador', 'Administrador']))->where('status', 'active')->get();
 
         if ($admins->isEmpty()) {
             $this->warn('No hay administradores activos para notificar.');

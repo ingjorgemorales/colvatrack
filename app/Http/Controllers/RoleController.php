@@ -42,7 +42,7 @@ class RoleController extends Controller
 
     public function destroy(Role $role)
     {
-        abort_if(in_array($role->name, ['Administrador','Tecnico','Conductor'], true), 422, 'No se pueden eliminar roles base.');
+        abort_if(in_array($role->name, ['Superadministrador','Administrador','Tecnico','Conductor'], true), 422, 'No se pueden eliminar roles base.');
         $role->delete(); return back()->with('success', 'Rol eliminado.');
     }
 

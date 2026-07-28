@@ -240,7 +240,7 @@ class ToolRequestService
         $request->loadMissing('technician', 'driver');
         $status = $request->status;
 
-        if ($user->hasRole('Administrador')) {
+        if ($user->hasRole('Superadministrador', 'Administrador')) {
             return $this->adminTransitions()[$status] ?? [];
         }
 

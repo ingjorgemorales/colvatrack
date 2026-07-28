@@ -17,8 +17,12 @@ class UserController extends Controller
 {
     public function index(Request $request)
     {
+        $actor = $request->user();
         $perPage = min((int) $request->integer('per_page', 10), 100);
         $users = User::with('role', 'assignedVehicle');
+        if (! $actor->hasRole('Superadministrador')) {
+            $users->whereDoesntHave('role', fn ($q) => $q->where('name', 'Superadministrador'));
+        }
         if ($request->filled('search')) {
             $search = $request->string('search');
             $users->where(function ($q) use ($search) {
@@ -30,20 +34,20 @@ class UserController extends Controller
         }
         return Inertia::render('Users/Index', [
             'users' => $users->latest()->paginate($perPage)->withQueryString(),
-            'roles' => Role::orderBy('name')->get(),
+            'roles' => $this->availableRoles($actor),
             'filters' => $request->only('search', 'per_page'),
         ]);
     }
 
-    public function create()
+    public function create(Request $request)
     {
-        return Inertia::render('Users/Form', ['user' => null, 'roles' => Role::orderBy('name')->get(), 'vehicles' => Vehicle::orderBy('plate')->get()]);
+        return Inertia::render('Users/Form', ['user' => null, 'roles' => $this->availableRoles($request->user()), 'vehicles' => Vehicle::orderBy('plate')->get()]);
     }
 
     public function store(Request $request)
     {
         $data = $request->validate([
-            'role_id' => ['required', 'exists:roles,id'], 'name' => ['required', 'string', 'max:120'], 'last_name' => ['required', 'string', 'max:120'],
+            'role_id' => ['required', $this->roleRule($request->user())], 'name' => ['required', 'string', 'max:120'], 'last_name' => ['required', 'string', 'max:120'],
             'cedula' => ['required', 'integer', 'min:1', 'unique:users,cedula'],
             'email' => ['required', 'email', 'unique:users,email'], 'phone' => ['nullable', 'string', 'max:40'], 'cargo' => ['nullable', 'string', 'max:120'],
             'status' => ['required', 'in:active,inactive'],
@@ -61,13 +65,17 @@ class UserController extends Controller
 
     public function edit(User $usuario)
     {
-        return Inertia::render('Users/Form', ['user' => $usuario->load('assignedVehicle'), 'roles' => Role::orderBy('name')->get(), 'vehicles' => Vehicle::orderBy('plate')->get()]);
+        $this->authorizeManageUser(auth()->user(), $usuario);
+
+        return Inertia::render('Users/Form', ['user' => $usuario->load('assignedVehicle'), 'roles' => $this->availableRoles(auth()->user()), 'vehicles' => Vehicle::orderBy('plate')->get()]);
     }
 
     public function update(Request $request, User $usuario)
     {
+        $this->authorizeManageUser($request->user(), $usuario);
+
         $data = $request->validate([
-            'role_id' => ['required', 'exists:roles,id'], 'name' => ['required', 'string', 'max:120'], 'last_name' => ['required', 'string', 'max:120'],
+            'role_id' => ['required', $this->roleRule($request->user())], 'name' => ['required', 'string', 'max:120'], 'last_name' => ['required', 'string', 'max:120'],
             'cedula' => ['required', 'integer', 'min:1', Rule::unique('users','cedula')->ignore($usuario->id)],
             'email' => ['required', 'email', Rule::unique('users','email')->ignore($usuario->id)], 'phone' => ['nullable', 'string', 'max:40'], 'cargo' => ['nullable', 'string', 'max:120'],
             'status' => ['required', 'in:active,inactive'], 'password' => ['nullable', 'confirmed', Password::min(8)->mixedCase()->numbers()->symbols()],
@@ -83,7 +91,32 @@ class UserController extends Controller
 
     public function destroy(User $usuario)
     {
+        $this->authorizeManageUser(auth()->user(), $usuario);
         $usuario->update(['status' => 'inactive']);
         return back()->with('success', 'Usuario desactivado.');
+    }
+
+    private function availableRoles(User $actor)
+    {
+        return Role::query()
+            ->when(! $actor->hasRole('Superadministrador'), fn ($q) => $q->where('name', '!=', 'Superadministrador'))
+            ->orderBy('name')
+            ->get();
+    }
+
+    private function roleRule(User $actor)
+    {
+        $rule = Rule::exists('roles', 'id');
+
+        if (! $actor->hasRole('Superadministrador')) {
+            $rule->where(fn ($q) => $q->where('name', '!=', 'Superadministrador'));
+        }
+
+        return $rule;
+    }
+
+    private function authorizeManageUser(User $actor, User $target): void
+    {
+        abort_if(! $actor->hasRole('Superadministrador') && $target->role?->name === 'Superadministrador', 403);
     }
 }

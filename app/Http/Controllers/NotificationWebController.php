@@ -9,8 +9,11 @@ class NotificationWebController extends Controller
 {
     public function index(Request $request)
     {
+        $user = $request->user();
+        $canSeeAll = $user->hasRole('Superadministrador', 'Administrador');
         $perPage = min((int) $request->integer('per_page', 10), 100);
-        $query = Notification::where('user_id', auth()->id());
+        $query = Notification::with('user.role')
+            ->when(! $canSeeAll, fn ($q) => $q->where('user_id', $user->id));
 
         if ($request->filled('search')) {
             $search = $request->string('search');
@@ -45,14 +48,21 @@ class NotificationWebController extends Controller
 
         return Inertia::render('Notifications/Index', [
             'notifications' => $query->latest()->paginate($perPage)->withQueryString(),
-            'types' => Notification::where('user_id', auth()->id())->select('type')->distinct()->orderBy('type')->pluck('type'),
+            'types' => Notification::query()
+                ->when(! $canSeeAll, fn ($q) => $q->where('user_id', $user->id))
+                ->select('type')
+                ->distinct()
+                ->orderBy('type')
+                ->pluck('type'),
+            'canSeeAllNotifications' => $canSeeAll,
             'filters' => $request->only(['search', 'type', 'read_status', 'date_from', 'date_to', 'per_page']) + ['per_page' => $perPage],
         ]);
     }
 
     public function read(Notification $notification)
     {
-        abort_unless($notification->user_id === auth()->id(), 403);
+        $user = auth()->user();
+        abort_unless($notification->user_id === $user->id || $user->hasRole('Superadministrador', 'Administrador'), 403);
         $notification->update(['read_at' => now()]);
         return back()->with('success', 'Notificacion marcada como leida.');
     }

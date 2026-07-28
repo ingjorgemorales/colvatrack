@@ -46,11 +46,11 @@ Route::middleware(['auth', 'must.change.password', 'audit'])->group(function () 
     Route::patch('/perfil/password', [ProfileController::class, 'password'])->name('perfil.password')->middleware('permission:perfil,editar');
 
     Route::get('/inventario', [InventoryController::class, 'index'])->name('inventario.index')->middleware('permission:inventario,ver');
-    Route::get('/inventario/catalogo', [InventoryController::class, 'catalog'])->name('inventario.catalogo')->middleware('role:Administrador');
+    Route::get('/inventario/catalogo', [InventoryController::class, 'catalog'])->name('inventario.catalogo')->middleware('role:Superadministrador,Administrador');
     Route::get('/inventario/movimientos', [InventoryController::class, 'movements'])->name('inventario.movimientos')->middleware('permission:inventario,ver');
-    Route::post('/inventario/items', [InventoryController::class, 'storeItem'])->name('inventario.items.store')->middleware('role:Administrador');
-    Route::patch('/inventario/items/{item}', [InventoryController::class, 'updateItem'])->name('inventario.items.update')->middleware('role:Administrador');
-    Route::patch('/inventario/items/{item}/status', [InventoryController::class, 'toggleItemStatus'])->name('inventario.items.status')->middleware('role:Administrador');
+    Route::post('/inventario/items', [InventoryController::class, 'storeItem'])->name('inventario.items.store')->middleware('role:Superadministrador,Administrador');
+    Route::patch('/inventario/items/{item}', [InventoryController::class, 'updateItem'])->name('inventario.items.update')->middleware('role:Superadministrador,Administrador');
+    Route::patch('/inventario/items/{item}/status', [InventoryController::class, 'toggleItemStatus'])->name('inventario.items.status')->middleware('role:Superadministrador,Administrador');
     Route::patch('/inventario/stock', [InventoryController::class, 'updateStock'])->name('inventario.stock.update')->middleware('permission:inventario,editar');
     Route::delete('/inventario/stock', [InventoryController::class, 'removeStock'])->name('inventario.stock.remove')->middleware('permission:inventario,editar');
 
@@ -62,17 +62,17 @@ Route::middleware(['auth', 'must.change.password', 'audit'])->group(function () 
     Route::patch('/solicitudes/{solicitude}/chat/read', [ChatWebController::class, 'read'])->name('solicitudes.chat.read')->middleware('permission:chat,editar');
     Route::patch('/solicitudes/{solicitude}/status', [ToolRequestWebController::class, 'status'])->name('solicitudes.status')->middleware(['permission:solicitudes,editar', 'location.enabled']);
 
-    Route::resource('usuarios', UserController::class)->parameters(['usuarios' => 'usuario'])->except('show')->middleware('role:Administrador');
-    Route::resource('roles', RoleController::class)->except('show')->middleware('role:Administrador');
-    Route::resource('vehiculos', VehicleController::class)->parameters(['vehiculos' => 'vehiculo'])->except('show')->middleware('role:Administrador');
+    Route::resource('usuarios', UserController::class)->parameters(['usuarios' => 'usuario'])->except('show')->middleware('role:Superadministrador,Administrador');
+    Route::resource('roles', RoleController::class)->except('show')->middleware('role:Superadministrador');
+    Route::resource('vehiculos', VehicleController::class)->parameters(['vehiculos' => 'vehiculo'])->except('show')->middleware('role:Superadministrador,Administrador');
     Route::get('/vehiculos/{vehiculo}/recorrido', [VehicleController::class, 'routeHistory'])->name('vehiculos.recorrido')->middleware('permission:vehiculos,recorrido');
-    Route::resource('configuracion/gps', GpsProviderController::class)->parameters(['gps' => 'gpsProvider'])->names('gps-providers')->except('show')->middleware('role:Administrador');
-    Route::post('/configuracion/gps/{gpsProvider}/test', [GpsProviderController::class, 'test'])->name('gps-providers.test')->middleware('role:Administrador');
+    Route::resource('configuracion/gps', GpsProviderController::class)->parameters(['gps' => 'gpsProvider'])->names('gps-providers')->except('show')->middleware('role:Superadministrador');
+    Route::post('/configuracion/gps/{gpsProvider}/test', [GpsProviderController::class, 'test'])->name('gps-providers.test')->middleware('role:Superadministrador');
 
 
     Route::get('/reportes', [ReportController::class, 'index'])->name('reportes.index')->middleware('permission:reportes,ver');
     Route::get('/reportes/export', [ReportController::class, 'export'])->name('reportes.export')->middleware('permission:reportes,exportar');
-    Route::get('/auditoria', [AuditController::class, 'index'])->name('auditoria.index')->middleware(['role:Administrador', 'permission:auditoria,ver']);
+    Route::get('/auditoria', [AuditController::class, 'index'])->name('auditoria.index')->middleware(['role:Superadministrador', 'permission:auditoria,ver']);
     Route::get('/notificaciones', [NotificationWebController::class, 'index'])->name('notificaciones.index')->middleware('permission:notificaciones,ver');
     Route::patch('/notificaciones/{notification}/read', [NotificationWebController::class, 'read'])->name('notificaciones.read')->middleware('permission:notificaciones,editar');
     Route::patch('/notificaciones/read-all', [NotificationWebController::class, 'readAll'])->name('notificaciones.read-all')->middleware('permission:notificaciones,editar');

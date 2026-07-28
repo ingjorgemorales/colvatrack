@@ -27,7 +27,7 @@ class ChatController extends Controller
         $user = $request->user();
 
         abort_unless(
-            $user->hasRole('Administrador')
+            $user->hasRole('Superadministrador', 'Administrador')
                 || (int) $toolRequest->technician_id === (int) $user->id
                 || (int) $toolRequest->driver_id === (int) $user->id,
             403

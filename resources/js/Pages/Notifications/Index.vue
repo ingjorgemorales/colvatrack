@@ -4,7 +4,7 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import { Bell, Filter, Search, X } from '@lucide/vue';
 import axios from 'axios';
 import { ref, watch } from 'vue';
-const props = defineProps({ notifications: Object, filters: Object, types: Array });
+const props = defineProps({ notifications: Object, filters: Object, types: Array, canSeeAllNotifications: Boolean });
 const search = ref(props.filters?.search ?? '');
 const type = ref(props.filters?.type ?? '');
 const readStatus = ref(props.filters?.read_status ?? '');
@@ -77,7 +77,7 @@ async function openNotification(n) {
         <button @click="applyFilters" class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-md bg-[#123f6e] px-4 py-3 font-semibold text-white transition-colors hover:bg-[#0e2d52]"><Filter class="h-4 w-4" /> Filtrar</button>
         <button @click="clearFilters" class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-md border border-[#123f6e] px-3 py-3 font-semibold text-[#123f6e] transition-colors hover:bg-[#123f6e] hover:text-white"><X class="h-4 w-4" /> Limpiar</button>
       </div>
-      <div class="space-y-3"><button v-for="n in rows" :key="n.id" type="button" @click="openNotification(n)" class="block w-full cursor-pointer rounded-md border p-4 text-left transition-colors" :class="[n.read_at ? 'border-slate-200 bg-white' : 'border-[#123f6e]/30 bg-[#e6eef7]', href(n) ? 'hover:border-[#123f6e]/50 hover:bg-[#edf3fa]' : 'hover:bg-slate-50']"><h3 class="font-semibold text-slate-950">{{ n.title }}</h3><p class="text-sm text-slate-600">{{ n.message }}</p><p class="mt-1 text-xs text-slate-400">{{ formatBogota(n.created_at) }}</p></button><p v-if="!rows.length" class="py-8 text-center text-sm text-slate-500">Sin notificaciones.</p></div>
+      <div class="space-y-3"><button v-for="n in rows" :key="n.id" type="button" @click="openNotification(n)" class="block w-full cursor-pointer rounded-md border p-4 text-left transition-colors" :class="[n.read_at ? 'border-slate-200 bg-white' : 'border-[#123f6e]/30 bg-[#e6eef7]', href(n) ? 'hover:border-[#123f6e]/50 hover:bg-[#edf3fa]' : 'hover:bg-slate-50']"><h3 class="font-semibold text-slate-950">{{ n.title }}</h3><p class="text-sm text-slate-600">{{ n.message }}</p><p v-if="canSeeAllNotifications" class="mt-1 text-xs font-medium text-slate-500">Usuario: {{ n.user?.name }} {{ n.user?.last_name }} - {{ n.user?.role?.name }}</p><p class="mt-1 text-xs text-slate-400">{{ formatBogota(n.created_at) }}</p></button><p v-if="!rows.length" class="py-8 text-center text-sm text-slate-500">Sin notificaciones.</p></div>
       <div v-if="notifications.last_page > 1" class="mt-5 flex flex-wrap items-center justify-center gap-1 sm:gap-2"><Link v-for="link in notifications.links" :key="link.label" :href="link.url || '#'" preserve-scroll class="rounded-md border px-2 py-2 text-xs font-semibold sm:px-3 sm:text-sm" :class="[link.active ? 'border-[#123f6e] bg-[#123f6e] text-white' : 'border-slate-200 bg-white text-slate-700', !link.url ? 'pointer-events-none opacity-40' : 'hover:bg-[#edf3fa]']" v-html="link.label" /></div>
     </section>
   </AppLayout>

@@ -24,7 +24,6 @@ const closeHandler = (e) => {
 const initials = computed(() => `${user.value?.name?.[0] ?? 'U'}${user.value?.last_name?.[0] ?? ''}`.toUpperCase());
 const permissions = computed(() => page.props.auth?.permissions ?? []);
 const can = (module, action = 'ver') => permissions.value.includes('*') || permissions.value.includes(`${module}.${action}`);
-const isAdmin = computed(() => user.value?.role?.name === 'Administrador');
 const nav = computed(() => [
     ['Dashboard', '/dashboard', BarChart3, can('dashboard')], ['Mapa', '/mapa', Map, can('mapa')], ['Solicitudes', '/solicitudes', ClipboardList, can('solicitudes')],
   ['Notificaciones', '/notificaciones', Bell, can('notificaciones')], ['Inventario', '/inventario', Boxes, can('inventario')],

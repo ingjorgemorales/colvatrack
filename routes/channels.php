@@ -18,7 +18,7 @@ Broadcast::channel('chat.{chatId}', function ($user, $chatId) {
         return false;
     }
 
-    return $user->hasRole('Administrador')
+    return $user->hasRole('Superadministrador', 'Administrador')
         || (int) $chat->technician_id === (int) $user->id
         || (int) $chat->driver_id === (int) $user->id
         || (int) $chat->request?->technician_id === (int) $user->id

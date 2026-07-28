@@ -13,6 +13,6 @@ class NotificationController extends Controller {
             'unread_count' => Notification::where('user_id', auth()->id())->whereNull('read_at')->count(),
         ]));
     }
-    public function read(Notification $notification){ abort_unless($notification->user_id===auth()->id(),403); $notification->update(['read_at'=>now()]); return $notification; }
+    public function read(Notification $notification){ $user=auth()->user(); abort_unless($notification->user_id===$user->id || $user->hasRole('Superadministrador','Administrador'),403); $notification->update(['read_at'=>now()]); return $notification; }
     public function readAll(){ Notification::where('user_id',auth()->id())->whereNull('read_at')->update(['read_at'=>now()]); return response()->json(['ok'=>true]); }
 }

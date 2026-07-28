@@ -44,7 +44,7 @@ class ToolRequestWebController extends Controller
     }
     public function create(Request $request)
     {
-        abort_unless($request->user()->hasRole('Tecnico', 'Administrador'), 403);
+        abort_unless($request->user()->hasRole('Tecnico', 'Superadministrador', 'Administrador'), 403);
 
         $user = $request->user();
         $activeTechnicianRequest = $user->hasRole('Tecnico')
@@ -89,7 +89,7 @@ class ToolRequestWebController extends Controller
 
     public function store(Request $request, ToolRequestService $service)
     {
-        abort_unless($request->user()->hasRole('Tecnico', 'Administrador'), 403);
+        abort_unless($request->user()->hasRole('Tecnico', 'Superadministrador', 'Administrador'), 403);
         $data = $request->validate([
             'vehicle_id' => ['required', 'exists:vehicles,id'],
             'priority' => ['required', 'in:baja,normal,alta,critica'],
@@ -117,7 +117,7 @@ class ToolRequestWebController extends Controller
     public function show(ToolRequest $solicitude, ToolRequestService $service)
     {
         $user = auth()->user();
-        abort_unless($user->hasRole('Administrador') || $solicitude->technician_id === $user->id || $solicitude->driver_id === $user->id, 403);
+        abort_unless($user->hasRole('Superadministrador', 'Administrador') || $solicitude->technician_id === $user->id || $solicitude->driver_id === $user->id, 403);
         $solicitude->load(['vehicle.inventory.item','technician','driver','items.item.category','histories.user','chat.messages.sender','activeDelays']);
         $routeLocations = collect();
 
@@ -152,7 +152,7 @@ class ToolRequestWebController extends Controller
     public function status(Request $request, ToolRequest $solicitude, ToolRequestService $service)
     {
         $user = $request->user();
-        abort_unless($user->hasRole('Administrador') || $solicitude->driver_id === $user->id || $solicitude->technician_id === $user->id, 403);
+        abort_unless($user->hasRole('Superadministrador', 'Administrador') || $solicitude->driver_id === $user->id || $solicitude->technician_id === $user->id, 403);
         $data = $request->validate(['status' => ['required', 'in:en_camino,en_uso,para_recoger,recogida,finalizada,cancelada'], 'comment' => ['nullable', 'string']]);
         try { $service->assertCanTransition($solicitude, $user, $data['status']); $service->changeStatus($solicitude, $data['status'], $user->id, $data['comment'] ?? null); }
         catch (\Throwable $e) { return back()->with('error', $e->getMessage()); }

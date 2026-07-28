@@ -40,7 +40,7 @@ class HandleInertiaRequests extends Middleware
             return [];
         }
 
-        if ($user->hasRole('Administrador')) {
+        if ($user->hasRole('Superadministrador')) {
             return ['*'];
         }
 
@@ -50,4 +50,3 @@ class HandleInertiaRequests extends Middleware
             ->all();
     }
 }
-
