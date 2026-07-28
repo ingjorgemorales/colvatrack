@@ -47,14 +47,46 @@ class InventoryController extends Controller
 
     public function movements(Request $request)
     {
+        $userSearch = trim((string) $request->get('user', ''));
+        $dateFrom = (string) $request->get('date_from', '');
+        $dateTo = (string) $request->get('date_to', '');
+        $vehicleId = (string) $request->get('vehicle_id', '');
+        $categoryId = (string) $request->get('category_id', '');
+        $itemId = (string) $request->get('item_id', '');
+        $movementType = (string) $request->get('movement_type', '');
         $perPage = min((int) $request->get('per_page', 15), 100);
 
+        $movements = InventoryMovement::with(['vehicle','item.category','creator'])
+            ->when($userSearch, fn ($q) => $q->whereHas('creator', fn ($creator) => $creator
+                ->where('name', 'like', "%{$userSearch}%")
+                ->orWhere('last_name', 'like', "%{$userSearch}%")
+                ->orWhere('email', 'like', "%{$userSearch}%")))
+            ->when($dateFrom, fn ($q) => $q->whereDate('created_at', '>=', $dateFrom))
+            ->when($dateTo, fn ($q) => $q->whereDate('created_at', '<=', $dateTo))
+            ->when($vehicleId, fn ($q) => $q->where('vehicle_id', $vehicleId))
+            ->when($categoryId, fn ($q) => $q->whereHas('item', fn ($item) => $item->where('inventory_category_id', $categoryId)))
+            ->when($itemId, fn ($q) => $q->where('inventory_item_id', $itemId))
+            ->when($movementType, fn ($q) => $q->where('movement_type', $movementType))
+            ->latest('created_at')
+            ->paginate($perPage)
+            ->withQueryString();
+
         return Inertia::render('Inventory/Movements', [
-            'movements' => InventoryMovement::with(['vehicle','item','creator'])
-                ->latest('created_at')
-                ->paginate($perPage)
-                ->withQueryString(),
-            'filters' => ['per_page' => $perPage],
+            'movements' => $movements,
+            'vehicles' => Vehicle::where('status', 'active')->orderBy('plate')->get(['id', 'plate']),
+            'categories' => InventoryCategory::orderBy('name')->get(['id', 'name']),
+            'items' => InventoryItem::with('category')->where('status', 'active')->orderBy('name')->get(['id', 'inventory_category_id', 'name', 'unit']),
+            'movementTypes' => InventoryMovement::select('movement_type')->distinct()->orderBy('movement_type')->pluck('movement_type'),
+            'filters' => [
+                'user' => $userSearch,
+                'date_from' => $dateFrom,
+                'date_to' => $dateTo,
+                'vehicle_id' => $vehicleId,
+                'category_id' => $categoryId,
+                'item_id' => $itemId,
+                'movement_type' => $movementType,
+                'per_page' => $perPage,
+            ],
         ]);
     }
 

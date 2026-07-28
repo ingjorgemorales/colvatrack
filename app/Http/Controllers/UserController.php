@@ -32,10 +32,13 @@ class UserController extends Controller
                   ->orWhere('email', 'like', "%$search%");
             });
         }
+        if ($request->filled('status')) {
+            $users->where('status', $request->string('status'));
+        }
         return Inertia::render('Users/Index', [
             'users' => $users->latest()->paginate($perPage)->withQueryString(),
             'roles' => $this->availableRoles($actor),
-            'filters' => $request->only('search', 'per_page'),
+            'filters' => $request->only('search', 'status', 'per_page'),
         ]);
     }
 

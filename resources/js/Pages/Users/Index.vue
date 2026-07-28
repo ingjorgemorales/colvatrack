@@ -5,17 +5,19 @@ import { Pencil, Plus, Search, Trash2 } from '@lucide/vue';
 import { ref } from 'vue';
 const props = defineProps({ users: Object, roles: Array, filters: Object });
 const search = ref(props.filters?.search ?? '');
+const status = ref(props.filters?.status ?? '');
 const perPage = ref(props.filters?.per_page ?? 10);
-const apply = () => router.get('/usuarios', { search: search.value || undefined, per_page: perPage.value || undefined }, { preserveState: true, replace: true });
-const clearFilters = () => { search.value = ''; perPage.value = 10; router.get('/usuarios', {}, { preserveState: true, replace: true }); };
+const apply = () => router.get('/usuarios', { search: search.value || undefined, status: status.value || undefined, per_page: perPage.value || undefined }, { preserveState: true, replace: true });
+const clearFilters = () => { search.value = ''; status.value = ''; perPage.value = 10; router.get('/usuarios', {}, { preserveState: true, replace: true }); };
 const deactivate = (user) => { if(confirm(`Desactivar usuario ${user.email}?`)) router.delete(`/usuarios/${user.id}`); };
 </script>
 <template>
   <Head title="Usuarios" />
   <AppLayout title="Usuarios">
     <section class="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
-      <div class="mb-5 grid gap-2 sm:grid-cols-[1fr_120px_auto_auto_auto]">
+      <div class="mb-5 grid gap-2 sm:grid-cols-[1fr_150px_120px_auto_auto_auto]">
         <div class="relative"><Search class="absolute left-3 top-3.5 h-5 w-5 text-slate-400" /><input v-model="search" @keyup.enter="apply" class="w-full rounded-md border border-slate-300 py-3 pl-10 pr-3 outline-none focus:border-[#123f6e]" placeholder="Buscar por nombre, cedula o correo" /></div>
+        <select v-model="status" @change="apply" class="w-full rounded-md border border-slate-300 px-3 py-3 text-sm sm:w-auto"><option value="">Todos</option><option value="active">Activos</option><option value="inactive">Inactivos</option></select>
         <select v-model="perPage" @change="apply" class="w-full rounded-md border border-slate-300 px-3 py-3 text-sm sm:w-auto"><option value="10">10 por pag.</option><option value="25">25 por pag.</option><option value="50">50 por pag.</option><option value="100">100 por pag.</option></select>
         <button @click="apply" class="w-full cursor-pointer rounded-md bg-[#123f6e] px-4 py-3 font-semibold text-white transition-colors hover:bg-[#0e2d52] sm:w-auto">Filtrar</button>
         <button @click="clearFilters" class="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-[#123f6e] px-4 py-3 font-semibold text-[#123f6e] transition-colors hover:bg-[#123f6e] hover:text-white sm:w-auto"><Search class="h-4 w-4" /> Limpiar</button>
