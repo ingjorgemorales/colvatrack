@@ -5,6 +5,7 @@ use App\Models\GpsProvider;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Models\VehicleLocation;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -37,20 +38,22 @@ class VehicleController extends Controller
             $query->where('status', 'active')
                 ->where(fn ($q) => $q->whereNull('current_speed')->orWhere('current_speed', '<=', 0));
         }
-        if ($movement === 'with_gps_in_range' || (($request->filled('date_from') || $request->filled('date_to')) && $movement === '')) {
-            $query->whereHas('locations', fn ($locations) => $this->locationRange($locations, $dateFrom, $dateTo));
-        }
-        if ($movement === 'moved_in_range') {
-            $query->whereHas('locations', fn ($locations) => $this->locationRange($locations, $dateFrom, $dateTo)->where('speed', '>', 0));
-        }
-        if ($movement === 'not_moved_in_range') {
-            $query->where('status', 'active')
-                ->whereHas('locations', fn ($locations) => $this->locationRange($locations, $dateFrom, $dateTo))
-                ->whereDoesntHave('locations', fn ($locations) => $this->locationRange($locations, $dateFrom, $dateTo)->where('speed', '>', 0));
-        }
-        if ($movement === 'no_gps_in_range') {
-            $query->where('status', 'active')
-                ->whereDoesntHave('locations', fn ($locations) => $this->locationRange($locations, $dateFrom, $dateTo));
+        if (in_array($movement, ['with_gps_in_range', 'moved_in_range', 'not_moved_in_range', 'no_gps_in_range'], true)
+            || (($request->filled('date_from') || $request->filled('date_to')) && $movement === '')) {
+            $idsWithGps = $this->vehicleIdsWithGpsInRange($dateFrom, $dateTo);
+            $idsMoved = $movement === 'moved_in_range' || $movement === 'not_moved_in_range'
+                ? $this->vehicleIdsMovedInRange($dateFrom, $dateTo)
+                : collect();
+
+            if ($movement === 'moved_in_range') {
+                $query->whereIn('id', $idsMoved);
+            } elseif ($movement === 'not_moved_in_range') {
+                $query->where('status', 'active')->whereIn('id', $idsWithGps)->whereNotIn('id', $idsMoved);
+            } elseif ($movement === 'no_gps_in_range') {
+                $query->where('status', 'active')->whereNotIn('id', $idsWithGps);
+            } else {
+                $query->whereIn('id', $idsWithGps);
+            }
         }
         return Inertia::render('Vehicles/Index', [
             'vehicles' => $query->paginate($perPage)->withQueryString(),
@@ -148,12 +151,25 @@ class VehicleController extends Controller
         }
     }
 
-    private function locationRange($query, CarbonImmutable $from, CarbonImmutable $to)
+    private function vehicleIdsWithGpsInRange(CarbonImmutable $from, CarbonImmutable $to)
     {
-        return $query
+        return VehicleLocation::query()
             ->whereNotNull('gps_datetime')
             ->where('gps_datetime', '>=', $from)
-            ->where('gps_datetime', '<=', $to);
+            ->where('gps_datetime', '<=', $to)
+            ->distinct()
+            ->pluck('vehicle_id');
+    }
+
+    private function vehicleIdsMovedInRange(CarbonImmutable $from, CarbonImmutable $to)
+    {
+        return VehicleLocation::query()
+            ->whereNotNull('gps_datetime')
+            ->where('gps_datetime', '>=', $from)
+            ->where('gps_datetime', '<=', $to)
+            ->where('speed', '>', 0)
+            ->distinct()
+            ->pluck('vehicle_id');
     }
 
     private function formData(?Vehicle $vehicle = null): array
