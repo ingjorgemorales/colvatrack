@@ -15,6 +15,13 @@ class VehicleController extends Controller
     public function index(Request $request)
     {
         $perPage = min((int) $request->integer('per_page', 10), 100);
+        $dateFrom = $this->parseDateRangeFilter($request->string('date_from')->toString()) ?? CarbonImmutable::now(config('app.timezone'))->startOfDay();
+        $dateTo = $this->parseDateRangeFilter($request->string('date_to')->toString(), true) ?? CarbonImmutable::now(config('app.timezone'));
+        $movement = match ($request->input('movement')) {
+            'moving' => 'moving_current',
+            'stopped' => 'stopped_current',
+            default => (string) $request->input('movement', ''),
+        };
         $query = Vehicle::with(['driver', 'provider'])->latest();
         if ($request->filled('search')) {
             $search = $request->string('search');
@@ -23,16 +30,38 @@ class VehicleController extends Controller
                 ->orWhere('model', 'like', "%$search%"));
         }
         if ($request->filled('status')) { $query->where('status', $request->status); }
-        if ($request->input('movement') === 'moving') {
+        if ($movement === 'moving_current') {
             $query->where('current_speed', '>', 0);
         }
-        if ($request->input('movement') === 'stopped') {
+        if ($movement === 'stopped_current') {
             $query->where('status', 'active')
                 ->where(fn ($q) => $q->whereNull('current_speed')->orWhere('current_speed', '<=', 0));
         }
+        if ($movement === 'with_gps_in_range' || (($request->filled('date_from') || $request->filled('date_to')) && $movement === '')) {
+            $query->whereHas('locations', fn ($locations) => $this->locationRange($locations, $dateFrom, $dateTo));
+        }
+        if ($movement === 'moved_in_range') {
+            $query->whereHas('locations', fn ($locations) => $this->locationRange($locations, $dateFrom, $dateTo)->where('speed', '>', 0));
+        }
+        if ($movement === 'not_moved_in_range') {
+            $query->where('status', 'active')
+                ->whereHas('locations', fn ($locations) => $this->locationRange($locations, $dateFrom, $dateTo))
+                ->whereDoesntHave('locations', fn ($locations) => $this->locationRange($locations, $dateFrom, $dateTo)->where('speed', '>', 0));
+        }
+        if ($movement === 'no_gps_in_range') {
+            $query->where('status', 'active')
+                ->whereDoesntHave('locations', fn ($locations) => $this->locationRange($locations, $dateFrom, $dateTo));
+        }
         return Inertia::render('Vehicles/Index', [
             'vehicles' => $query->paginate($perPage)->withQueryString(),
-            'filters' => $request->only('search', 'status', 'movement', 'per_page'),
+            'filters' => [
+                'search' => $request->get('search', ''),
+                'status' => $request->get('status', ''),
+                'movement' => $movement,
+                'date_from' => $dateFrom->format('Y-m-d'),
+                'date_to' => $dateTo->format('Y-m-d'),
+                'per_page' => $perPage,
+            ],
         ]);
     }
 
@@ -100,6 +129,31 @@ class VehicleController extends Controller
         } catch (\Throwable) {
             return null;
         }
+    }
+
+    private function parseDateRangeFilter(?string $value, bool $endOfDay = false): ?CarbonImmutable
+    {
+        if (! $value) {
+            return null;
+        }
+
+        try {
+            $date = CarbonImmutable::parse($value, config('app.timezone'));
+
+            return preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)
+                ? ($endOfDay ? $date->endOfDay() : $date->startOfDay())
+                : $date->setSecond(0);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function locationRange($query, CarbonImmutable $from, CarbonImmutable $to)
+    {
+        return $query
+            ->whereNotNull('gps_datetime')
+            ->where('gps_datetime', '>=', $from)
+            ->where('gps_datetime', '<=', $to);
     }
 
     private function formData(?Vehicle $vehicle = null): array
