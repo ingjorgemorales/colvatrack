@@ -5,6 +5,7 @@ import { LocateFixed, MapPinOff, RefreshCw } from '@lucide/vue';
 
 const page = usePage();
 const location = computed(() => page.props.location ?? {});
+const authUser = computed(() => page.props.auth?.user ?? {});
 const required = computed(() => Boolean(location.value.required));
 const active = ref(Boolean(location.value.active));
 const status = ref(active.value ? 'active' : 'pending');
@@ -56,6 +57,22 @@ async function sendPosition(position) {
         status.value = 'active';
         lastSentAt.value = new Date();
         message.value = 'Ubicacion activa';
+        window.dispatchEvent(new CustomEvent('colvatrack:user-location-updated', {
+            detail: {
+                technician: {
+                    id: authUser.value?.id,
+                    name: authUser.value?.name,
+                    last_name: authUser.value?.last_name,
+                    email: authUser.value?.email,
+                    phone: authUser.value?.phone,
+                    role: authUser.value?.role?.name,
+                    current_latitude: position.coords.latitude,
+                    current_longitude: position.coords.longitude,
+                    location_updated_at: new Date().toISOString(),
+                    location_is_fresh: true,
+                },
+            },
+        }));
         hideNotice();
     } catch (error) {
         active.value = false;

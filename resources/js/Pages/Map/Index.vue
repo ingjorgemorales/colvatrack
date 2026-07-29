@@ -21,10 +21,13 @@ const radiusOptions = [500, 1000, 2000, 3000];
 const distance = ref(page.props.auth?.user?.role?.name === 'Tecnico' ? '3000' : '');
 const lastRefresh = ref(null);
 const refreshing = ref(false);
+const freshnessTick = ref(Date.now());
 let map;
 let markers = [];
 let radiusCircles = [];
 let pollTimer;
+let freshnessTimer;
+const technicianLocationChannelName = 'users.location';
 let fittedOnce = false;
 
 const selectedTechnician = computed(() => technicians.value.find(t => String(t.id) === String(selectedTechnicianId.value)) ?? null);
@@ -51,6 +54,7 @@ const staleCount = computed(() => filtered.value.filter(v => !Boolean(v.gps_is_f
 const occupiedCount = computed(() => filtered.value.filter(v => Boolean(v.is_occupied)).length);
 const technicianCount = computed(() => technicians.value.length);
 const lastRefreshLabel = computed(() => lastRefresh.value ? lastRefresh.value.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'Pendiente');
+const locationMaxAgeMs = computed(() => Math.max(Number(page.props.location?.max_age_minutes ?? 1), 1) * 60 * 1000);
 const radiusLabel = computed(() => {
   if (!radiusMeters.value) return 'Sin filtro por radio';
   if (!radiusTechnicians.value.length) return 'Sin tecnico con ubicacion para aplicar radio';
@@ -82,6 +86,12 @@ function nearestTechnicianDistance(vehicle) {
   const refs = radiusTechnicians.value.length ? radiusTechnicians.value : technicians.value;
   const distances = refs.map(t => distanceBetween(t, vehicle)).filter(Number.isFinite);
   return distances.length ? Math.min(...distances) : null;
+}
+
+function isTechnicianLocationFresh(t) {
+  freshnessTick.value;
+  const updatedAt = new Date(t.location_updated_at ?? '').getTime();
+  return Number.isFinite(updatedAt) && Date.now() - updatedAt <= locationMaxAgeMs.value;
 }
 
 function vehicleIcon(v) {
@@ -118,7 +128,7 @@ function vehicleIcon(v) {
 }
 
 function technicianIcon(t) {
-  const fresh = Boolean(t.location_is_fresh);
+  const fresh = isTechnicianLocationFresh(t);
   const initials = `${t.name?.[0] ?? ''}${t.last_name?.[0] ?? ''}`.toUpperCase() || 'T';
   return L.divIcon({
     className: '',
@@ -169,11 +179,12 @@ function vehiclePopup(v) {
 }
 
 function technicianPopup(t) {
-  const freshness = t.location_is_fresh ? 'Ubicacion vigente' : 'Ubicacion vencida';
+  const fresh = isTechnicianLocationFresh(t);
+  const freshness = fresh ? 'Ubicacion vigente' : 'Ubicacion vencida';
   return `
     <div class="vehicle-popup">
       <div class="vehicle-popup__title">${escapeHtml(t.name)} ${escapeHtml(t.last_name ?? '')}</div>
-      <div class="vehicle-popup__status ${t.location_is_fresh ? 'is-fresh' : 'is-stale'}">${freshness}</div>
+      <div class="vehicle-popup__status ${fresh ? 'is-fresh' : 'is-stale'}">${freshness}</div>
       <dl>
         <div><dt>Rol</dt><dd>${escapeHtml(t.role ?? 'Tecnico')}</dd></div>
         <div><dt>Telefono</dt><dd>${escapeHtml(t.phone ?? '-')}</dd></div>
@@ -256,16 +267,61 @@ async function refreshVehicles() {
   }
 }
 
+function normalizeTechnicianLocation(event) {
+  const incoming = event?.technician ?? event?.user ?? event;
+  if (!incoming?.id || !incoming.current_latitude || !incoming.current_longitude) return null;
+
+  return {
+    id: incoming.id,
+    name: incoming.name ?? 'Tecnico',
+    last_name: incoming.last_name ?? '',
+    email: incoming.email ?? '',
+    phone: incoming.phone ?? '',
+    role: incoming.role?.name ?? incoming.role ?? 'Tecnico',
+    current_latitude: incoming.current_latitude,
+    current_longitude: incoming.current_longitude,
+    location_updated_at: incoming.location_updated_at ?? new Date().toISOString(),
+    location_is_fresh: true,
+  };
+}
+
+function receiveTechnicianLocation(event) {
+  const incoming = normalizeTechnicianLocation(event);
+  if (!incoming) return;
+
+  const index = technicians.value.findIndex(t => Number(t.id) === Number(incoming.id));
+  if (index >= 0) {
+    technicians.value[index] = { ...technicians.value[index], ...incoming };
+    technicians.value = [...technicians.value];
+  } else if (!isTechnician.value || Number(page.props.auth?.user?.id) === Number(incoming.id)) {
+    technicians.value = [...technicians.value, incoming];
+  }
+
+  lastRefresh.value = new Date();
+  renderMarkers();
+}
+
 onMounted(() => {
   map = L.map(mapEl.value, { zoomControl: true }).setView([4.65, -74.09], 12);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: 'Leaflet | OpenStreetMap' }).addTo(map);
   lastRefresh.value = new Date();
   renderMarkers({ fit: true });
-  pollTimer = window.setInterval(refreshVehicles, 11000);
+  if (window.Echo) {
+    window.Echo.channel(technicianLocationChannelName).listen('UserLocationUpdated', receiveTechnicianLocation);
+  }
+  window.addEventListener('colvatrack:user-location-updated', receiveTechnicianLocation);
+  pollTimer = window.setInterval(refreshVehicles, 30000);
+  freshnessTimer = window.setInterval(() => {
+    freshnessTick.value = Date.now();
+    renderMarkers();
+  }, 15000);
 });
 
 onBeforeUnmount(() => {
   if (pollTimer) window.clearInterval(pollTimer);
+  if (freshnessTimer) window.clearInterval(freshnessTimer);
+  if (window.Echo) window.Echo.leave(technicianLocationChannelName);
+  window.removeEventListener('colvatrack:user-location-updated', receiveTechnicianLocation);
   clearLayers();
 });
 

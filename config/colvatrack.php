@@ -10,8 +10,8 @@ return [
         'moviles' => env('GPS_SERVICETRACK_MOVILES', ''),
     ],
     'location' => [
-        'update_interval_seconds' => (int) env('LOCATION_UPDATE_INTERVAL_SECONDS', 60),
-        'max_age_minutes' => (int) env('LOCATION_MAX_AGE_MINUTES', 10),
+        'update_interval_seconds' => (int) env('LOCATION_UPDATE_INTERVAL_SECONDS', 10),
+        'max_age_minutes' => (int) env('LOCATION_MAX_AGE_MINUTES', 1),
         'required_roles' => ['Tecnico'],
     ],
 ];
