@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Vehicle;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
@@ -105,16 +106,26 @@ class VehicleController extends Controller
     private function formData(?Vehicle $vehicle = null): array
     {
         $driverRole = Role::where('name', 'Conductor')->first();
+        $assignedDriverIds = Vehicle::query()
+            ->when($vehicle, fn ($q) => $q->whereKeyNot($vehicle->id))
+            ->whereNotNull('driver_id')
+            ->pluck('driver_id');
+
         return [
             'vehicle' => $vehicle?->load('driver', 'provider'),
-            'drivers' => User::when($driverRole, fn($q) => $q->where('role_id', $driverRole->id))->where('status', 'active')->orderBy('name')->get(),
+            'drivers' => User::when($driverRole, fn($q) => $q->where('role_id', $driverRole->id))
+                ->where('status', 'active')
+                ->whereNotIn('id', $assignedDriverIds)
+                ->orderBy('name')
+                ->get(),
             'providers' => GpsProvider::orderBy('name')->get(),
         ];
     }
 
     private function validated(Request $request, ?Vehicle $vehicle = null): array
     {
-        return $request->validate([
+        $driverRoleId = Role::where('name', 'Conductor')->value('id');
+        $data = $request->validate([
             'plate' => ['required', 'string', 'max:20', Rule::unique('vehicles', 'plate')->ignore($vehicle?->id)],
             'brand' => ['nullable', 'string', 'max:80'],
             'model' => ['nullable', 'string', 'max:80'],
@@ -123,7 +134,12 @@ class VehicleController extends Controller
             'status' => ['required', 'in:active,inactive,maintenance'],
             'gps_provider_id' => ['nullable', 'exists:gps_providers,id'],
             'external_gps_id' => ['nullable', 'string', 'max:80'],
-            'driver_id' => ['nullable', 'exists:users,id'],
+            'driver_id' => [
+                'nullable',
+                Rule::exists('users', 'id')->where(fn ($q) => $q
+                    ->when($driverRoleId, fn ($query) => $query->where('role_id', $driverRoleId))
+                    ->where('status', 'active')),
+            ],
             'current_latitude' => ['nullable', 'numeric'],
             'current_longitude' => ['nullable', 'numeric'],
             'current_speed' => ['nullable', 'numeric'],
@@ -132,5 +148,19 @@ class VehicleController extends Controller
             'imei' => ['nullable', 'string', 'max:80'],
             'odometer' => ['nullable', 'numeric'],
         ]);
+
+        if (! empty($data['driver_id'])) {
+            $assignedVehicle = Vehicle::where('driver_id', $data['driver_id'])
+                ->when($vehicle, fn ($q) => $q->whereKeyNot($vehicle->id))
+                ->first();
+
+            if ($assignedVehicle) {
+                throw ValidationException::withMessages([
+                    'driver_id' => 'Este conductor ya esta asignado al vehiculo '.$assignedVehicle->plate.'.',
+                ]);
+            }
+        }
+
+        return $data;
     }
 }
