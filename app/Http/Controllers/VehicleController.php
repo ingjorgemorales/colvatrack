@@ -121,7 +121,7 @@ class VehicleController extends Controller
                 ->get(),
             'providers' => GpsProvider::orderBy('name')->get(),
             'projects' => Project::where('status', 'active')
-                ->when($vehicle?->project_id, fn ($q) => $q->orWhereKey($vehicle->project_id))
+                ->when($vehicle?->project_id, fn ($q) => $q->orWhere('id', $vehicle->project_id))
                 ->orderBy('name')
                 ->get(),
         ];
