@@ -78,6 +78,25 @@ class VehicleController extends Controller
         return back()->with('success', 'Vehiculo desactivado.');
     }
 
+    public function toggleStatus(Vehicle $vehiculo)
+    {
+        if ($vehiculo->status === 'active') {
+            $vehiculo->activeReservation()?->update([
+                'status' => 'released',
+                'released_at' => now(),
+                'release_comment' => 'Reserva liberada automaticamente al desactivar el vehiculo.',
+            ]);
+
+            $vehiculo->update(['status' => 'inactive', 'driver_id' => null]);
+
+            return back()->with('success', 'Vehiculo desactivado.');
+        }
+
+        $vehiculo->update(['status' => 'active']);
+
+        return back()->with('success', 'Vehiculo activado.');
+    }
+
     public function routeHistory(Request $request, Vehicle $vehiculo)
     {
         $from = $this->parseDateFilter($request->string('from')->toString()) ?? now()->subHours(24);

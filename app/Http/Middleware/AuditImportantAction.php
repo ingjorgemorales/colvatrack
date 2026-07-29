@@ -103,6 +103,7 @@ class AuditImportantAction
             'usuarios.destroy' => $user.' desactivo el usuario '.$this->modelPerson($request, 'usuario').'.',
             'vehiculos.store' => $user.' creo el vehiculo '.$request->input('plate', 'sin placa').'.',
             'vehiculos.update' => $user.' actualizo el vehiculo '.$this->modelName($request, 'vehiculo', 'plate').'.',
+            'vehiculos.status' => $user.' cambio el estado del vehiculo '.$this->modelName($request, 'vehiculo', 'plate').'.',
             'vehiculos.destroy' => $user.' desactivo el vehiculo '.$this->modelName($request, 'vehiculo', 'plate').'.',
             'roles.store' => $user.' creo el rol '.$this->payloadName($request).'.',
             'roles.update' => $user.' actualizo el rol '.$this->modelName($request, 'role').'.',

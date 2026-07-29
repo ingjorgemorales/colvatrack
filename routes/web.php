@@ -92,6 +92,7 @@ Route::middleware(['auth', 'must.change.password', 'audit'])->group(function () 
     Route::get('/vehiculos/{vehiculo}/edit', [VehicleController::class, 'edit'])->name('vehiculos.edit')->middleware('permission:vehiculos,editar');
     Route::patch('/vehiculos/{vehiculo}', [VehicleController::class, 'update'])->name('vehiculos.update')->middleware('permission:vehiculos,editar');
     Route::put('/vehiculos/{vehiculo}', [VehicleController::class, 'update'])->name('vehiculos.update')->middleware('permission:vehiculos,editar');
+    Route::patch('/vehiculos/{vehiculo}/estado', [VehicleController::class, 'toggleStatus'])->name('vehiculos.status')->middleware('permission:vehiculos,editar');
     Route::delete('/vehiculos/{vehiculo}', [VehicleController::class, 'destroy'])->name('vehiculos.destroy')->middleware('permission:vehiculos,eliminar');
     Route::post('/vehiculos/{vehicle}/reservas', [VehicleReservationController::class, 'store'])->name('vehiculos.reservas.store')->middleware('permission:vehiculos,editar');
     Route::patch('/vehiculos/{vehicle}/reservas/liberar', [VehicleReservationController::class, 'release'])->name('vehiculos.reservas.release')->middleware('permission:vehiculos,editar');
