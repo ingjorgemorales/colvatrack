@@ -6,6 +6,7 @@ use App\Models\Project;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Models\VehicleReservation;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -32,9 +33,19 @@ class VehicleController extends Controller
             $query->where('status', 'active')
                 ->where(fn ($q) => $q->whereNull('current_speed')->orWhere('current_speed', '<=', 0));
         }
+        if (in_array($request->input('reserved'), ['active', 'none'], true)) {
+            $reservedVehicleIds = VehicleReservation::query()
+                ->select('vehicle_id')
+                ->where('status', 'active')
+                ->where(fn ($q) => $q->whereNull('ends_at')->orWhere('ends_at', '>=', now()));
+
+            $request->input('reserved') === 'active'
+                ? $query->whereIn('id', $reservedVehicleIds)
+                : $query->whereNotIn('id', $reservedVehicleIds);
+        }
         return Inertia::render('Vehicles/Index', [
             'vehicles' => $query->paginate($perPage)->withQueryString(),
-            'filters' => $request->only('search', 'status', 'movement', 'per_page'),
+            'filters' => $request->only('search', 'status', 'movement', 'reserved', 'per_page'),
         ]);
     }
 

@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 use App\Models\ChatMessage;
 use App\Models\InventoryItem;
 use App\Models\Notification;
+use App\Models\Project;
 use App\Models\ToolRequest;
 use App\Models\ToolRequestDelay;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Models\VehicleReservation;
 use Inertia\Inertia;
 
 class DashboardController extends Controller
@@ -48,6 +50,8 @@ class DashboardController extends Controller
                 ['label' => 'Vehiculos activos', 'value' => Vehicle::where('status','active')->count(), 'icon' => 'MapPin', 'route' => '/vehiculos?status=active'],
                 ['label' => 'En movimiento', 'value' => Vehicle::where('current_speed','>',0)->count(), 'icon' => 'MapPin', 'route' => '/vehiculos?movement=moving'],
                 ['label' => 'Sin movimiento', 'value' => Vehicle::where('status', 'active')->where(fn ($q) => $q->whereNull('current_speed')->orWhere('current_speed', '<=', 0))->count(), 'icon' => 'Clock3', 'route' => '/vehiculos?movement=stopped'],
+                ['label' => 'Vehiculos reservados', 'value' => VehicleReservation::where('status', 'active')->where(fn ($q) => $q->whereNull('ends_at')->orWhere('ends_at', '>=', now()))->distinct('vehicle_id')->count('vehicle_id'), 'icon' => 'LockKeyhole', 'route' => '/vehiculos?reserved=active'],
+                ['label' => 'Proyectos', 'value' => Project::count(), 'icon' => 'FolderKanban', 'route' => '/vehiculos/proyectos'],
                 ['label' => 'Total usuarios', 'value' => User::count(), 'icon' => 'Users', 'route' => '/usuarios'],
                 ['label' => 'Solicitudes pendientes', 'value' => ToolRequest::where('status','pendiente')->count(), 'icon' => 'ClipboardList', 'route' => '/solicitudes?status=pendiente'],
                 ['label' => 'En demora', 'value' => ToolRequestDelay::where('status', 'active')->count(), 'icon' => 'AlertTriangle', 'route' => '/solicitudes?delay=active'],

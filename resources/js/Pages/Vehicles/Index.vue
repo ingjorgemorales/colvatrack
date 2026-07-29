@@ -11,9 +11,10 @@ const can = (module, action = 'ver') => perms.includes('*') || perms.includes(`$
 const search = ref(props.filters?.search ?? '');
 const status = ref(props.filters?.status ?? '');
 const movement = ref(props.filters?.movement ?? '');
+const reserved = ref(props.filters?.reserved ?? '');
 const perPage = ref(props.filters?.per_page ?? 10);
-const apply = () => router.get('/vehiculos', { search: search.value, status: status.value, movement: movement.value, per_page: perPage.value }, { preserveState: true, replace: true });
-const clearFilters = () => { search.value = ''; status.value = ''; movement.value = ''; perPage.value = 10; router.get('/vehiculos', {}, { preserveState: true, replace: true }); };
+const apply = () => router.get('/vehiculos', { search: search.value, status: status.value, movement: movement.value, reserved: reserved.value, per_page: perPage.value }, { preserveState: true, replace: true });
+const clearFilters = () => { search.value = ''; status.value = ''; movement.value = ''; reserved.value = ''; perPage.value = 10; router.get('/vehiculos', {}, { preserveState: true, replace: true }); };
 const deactivate = (vehicle) => {
   const driverText = vehicle.driver?.name ? `\n\nSe liberara el conductor ${vehicle.driver.name} ${vehicle.driver.last_name ?? ''}.` : '';
   if (confirm(`Desactivar vehiculo ${vehicle.plate}?${driverText}`)) router.delete(`/vehiculos/${vehicle.id}`);
@@ -36,10 +37,11 @@ const canManageVehicles = computed(() => can('vehiculos', 'editar'));
   <Head title="Vehiculos" />
   <AppLayout title="Vehiculos">
     <section class="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
-      <div class="mb-5 grid gap-2 sm:grid-cols-[1fr_180px_180px_140px_auto_auto] xl:grid-cols-[1fr_220px_190px_150px_auto_auto]">
+      <div class="mb-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-[1fr_160px_170px_170px_140px_auto_auto]">
         <div class="relative"><Search class="absolute left-3 top-3.5 h-5 w-5 text-slate-400" /><input v-model="search" @keyup.enter="apply" class="w-full rounded-md border border-slate-300 py-3 pl-10 pr-3" placeholder="Buscar placa, marca o modelo" /></div>
         <select v-model="status" class="w-full rounded-md border border-slate-300 px-3 py-3 sm:w-auto"><option value="">Todos los estados</option><option value="active">Activo</option><option value="maintenance">Mantenimiento</option><option value="inactive">Inactivo</option></select>
         <select v-model="movement" class="w-full rounded-md border border-slate-300 px-3 py-3 sm:w-auto"><option value="">Todos los movimientos</option><option value="moving">En movimiento</option><option value="stopped">Sin movimiento</option></select>
+        <select v-model="reserved" class="w-full rounded-md border border-slate-300 px-3 py-3 sm:w-auto"><option value="">Todas las reservas</option><option value="active">Reservados</option><option value="none">No reservados</option></select>
         <select v-model="perPage" @change="apply" class="w-full rounded-md border border-slate-300 px-3 py-3 sm:w-auto"><option value="10">10 por pagina</option><option value="25">25 por pagina</option><option value="50">50 por pagina</option><option value="100">100 por pagina</option></select>
         <button @click="apply" class="w-full cursor-pointer rounded-md bg-[#123f6e] px-4 py-3 font-semibold text-white transition-colors hover:bg-[#0e2d52] sm:w-auto">Filtrar</button>
         <button @click="clearFilters" class="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-[#123f6e] px-4 py-3 font-semibold text-[#123f6e] transition-colors hover:bg-[#123f6e] hover:text-white sm:w-auto"><X class="h-4 w-4" /> Limpiar</button>

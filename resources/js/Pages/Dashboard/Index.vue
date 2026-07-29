@@ -1,10 +1,10 @@
 <script setup>
 import { Head, Link, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
-import { AlertTriangle, Bell, Car, CheckCircle, ClipboardList, Clock3, MapPin, MessageCircle, PackageCheck, Users } from '@lucide/vue';
+import { AlertTriangle, Bell, Car, CheckCircle, ClipboardList, Clock3, FolderKanban, LockKeyhole, MapPin, MessageCircle, PackageCheck, Users } from '@lucide/vue';
 import { onBeforeUnmount, onMounted } from 'vue';
 defineProps({ stats: Array, recentRequests: Array, role: String, notifications: Array });
-const icons = { AlertTriangle, Bell, Car, CheckCircle, ClipboardList, Clock3, MapPin, MessageCircle, PackageCheck, Users };
+const icons = { AlertTriangle, Bell, Car, CheckCircle, ClipboardList, Clock3, FolderKanban, LockKeyhole, MapPin, MessageCircle, PackageCheck, Users };
 const statusLabels = { pendiente:'Pendiente', aceptada:'Aceptada', rechazada:'Rechazada', vencida:'Vencida', en_camino:'En camino', entregada:'Entregada', en_uso:'En uso', para_recoger:'Lista para recoger', recogida:'Herramienta recogida', finalizada:'Finalizada', cancelada:'Cancelada' };
 const statusClasses = { pendiente:'bg-amber-50 text-amber-800', aceptada:'bg-blue-50 text-blue-800', en_camino:'bg-sky-50 text-sky-800', entregada:'bg-emerald-50 text-emerald-800', en_uso:'bg-indigo-50 text-indigo-800', para_recoger:'bg-orange-50 text-orange-800', recogida:'bg-slate-100 text-slate-800', finalizada:'bg-emerald-100 text-emerald-900', rechazada:'bg-red-50 text-red-800', vencida:'bg-orange-100 text-orange-900', cancelada:'bg-red-50 text-red-800' };
 const iconColors = {
@@ -18,6 +18,8 @@ const iconColors = {
   Car: 'bg-amber-100 text-amber-700',
   Bell: 'bg-rose-100 text-rose-700',
   Users: 'bg-slate-100 text-slate-700',
+  FolderKanban: 'bg-cyan-100 text-cyan-700',
+  LockKeyhole: 'bg-amber-100 text-amber-800',
 };
 let dashboardRefreshTimer = null;
 let dashboardChannelName = null;
