@@ -94,6 +94,7 @@ class ProjectController extends Controller
         return [
             'project' => $project?->load('vehicles:id,plate,project_id'),
             'vehicles' => Vehicle::query()
+                ->where('status', 'active')
                 ->where(fn ($query) => $query
                     ->whereNull('project_id')
                     ->when($project, fn ($q) => $q->orWhere('project_id', $project->id)))

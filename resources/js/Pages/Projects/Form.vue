@@ -1,15 +1,23 @@
 <script setup>
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
-import { ArrowLeft, Save } from '@lucide/vue';
+import { ArrowLeft, Save, Search, X } from '@lucide/vue';
+import { computed, ref } from 'vue';
 
 const props = defineProps({ project: Object, vehicles: Array });
 const isEdit = Boolean(props.project);
+const vehicleSearch = ref('');
 const form = useForm({
   name: props.project?.name ?? '',
   description: props.project?.description ?? '',
   status: props.project?.status ?? 'active',
   vehicle_ids: props.project?.vehicles?.map(vehicle => vehicle.id) ?? [],
+});
+const filteredVehicles = computed(() => {
+  const search = vehicleSearch.value.trim().toLowerCase();
+  if (!search) return props.vehicles;
+
+  return props.vehicles.filter(vehicle => String(vehicle.plate ?? '').toLowerCase().includes(search));
 });
 const submit = () => isEdit ? form.patch(`/vehiculos/proyectos/${props.project.id}`) : form.post('/vehiculos/proyectos');
 </script>
@@ -28,14 +36,24 @@ const submit = () => isEdit ? form.patch(`/vehiculos/proyectos/${props.project.i
             <span class="font-semibold text-slate-700">Vehiculos del proyecto</span>
             <span class="text-sm text-slate-500">{{ form.vehicle_ids.length }} seleccionados</span>
           </div>
+          <div class="mb-3 grid gap-2 sm:grid-cols-[1fr_auto]">
+            <div class="relative">
+              <Search class="absolute left-3 top-3.5 h-5 w-5 text-slate-400" />
+              <input v-model="vehicleSearch" class="w-full rounded-md border border-slate-300 py-3 pl-10 pr-3" placeholder="Buscar vehiculo por placa" />
+            </div>
+            <button v-if="vehicleSearch" type="button" @click="vehicleSearch = ''" class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-md border border-[#123f6e] px-4 py-3 font-semibold text-[#123f6e] transition-colors hover:bg-[#123f6e] hover:text-white">
+              <X class="h-4 w-4" /> Limpiar
+            </button>
+          </div>
           <div class="max-h-72 overflow-y-auto rounded-md border border-slate-200">
-            <label v-for="vehicle in vehicles" :key="vehicle.id" class="flex cursor-pointer items-center justify-between gap-3 border-b border-slate-100 px-3 py-3 last:border-b-0 hover:bg-slate-50">
+            <label v-for="vehicle in filteredVehicles" :key="vehicle.id" class="flex cursor-pointer items-center justify-between gap-3 border-b border-slate-100 px-3 py-3 last:border-b-0 hover:bg-slate-50">
               <span class="font-medium text-slate-700">{{ vehicle.plate }}</span>
               <input v-model="form.vehicle_ids" type="checkbox" :value="vehicle.id" class="h-4 w-4 rounded border-slate-300 text-[#123f6e]" />
             </label>
             <p v-if="!vehicles.length" class="p-4 text-sm text-slate-500">No hay vehiculos disponibles para asignar.</p>
+            <p v-else-if="!filteredVehicles.length" class="p-4 text-sm text-slate-500">No hay vehiculos que coincidan con la busqueda.</p>
           </div>
-          <p class="mt-2 text-xs text-slate-500">Aqui solo aparecen vehiculos sin proyecto o que ya pertenecen a este proyecto.</p>
+          <p class="mt-2 text-xs text-slate-500">Mostrando {{ filteredVehicles.length }} de {{ vehicles.length }} vehiculos. Aqui solo aparecen vehiculos sin proyecto o que ya pertenecen a este proyecto.</p>
         </section>
         <div v-if="Object.keys(form.errors).length" class="md:col-span-2 rounded-md bg-red-50 p-3 text-sm text-red-700"><p v-for="error in form.errors" :key="error">{{ error }}</p></div>
         <div class="md:col-span-2"><button class="inline-flex cursor-pointer items-center gap-2 rounded-md bg-[#123f6e] px-5 py-3 font-semibold text-white transition-colors hover:bg-[#0e2d52]"><Save class="h-5 w-5" /> Guardar proyecto</button></div>
