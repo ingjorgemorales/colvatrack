@@ -368,6 +368,29 @@ watch([query, status, availability, selectedTechnicianId, distance], () => rende
       <Link v-if="can('vehiculos')" href="/vehiculos" class="rounded bg-white px-3 py-2 font-semibold text-[#123f6e] shadow-sm">Gestionar vehiculos</Link>
     </section>
 
-    <section class="rounded-md border border-slate-200 bg-white p-3 shadow-sm sm:p-4"><div ref="mapEl" class="h-[calc(100vh-20rem)] min-h-[360px] w-full sm:h-[calc(100vh-18rem)] sm:min-h-[560px] xl:h-[calc(100vh-16rem)]"></div></section>
+    <section class="rounded-md border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
+      <div ref="mapEl" class="map-canvas w-full"></div>
+    </section>
   </AppLayout>
 </template>
+
+<style scoped>
+.map-canvas {
+  height: calc(100vh - 18rem);
+  min-height: 420px;
+}
+
+@media (min-width: 768px) {
+  .map-canvas {
+    height: calc(100vh - 16rem);
+    min-height: 620px;
+  }
+}
+
+@media (min-width: 1536px) {
+  .map-canvas {
+    height: calc(100vh - 14rem);
+    min-height: 720px;
+  }
+}
+</style>
