@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
+use App\Events\UserLocationUpdated;
 use App\Models\AuditLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -33,7 +34,38 @@ class AuthenticatedSessionController extends Controller
         $this->audit($request, 'post', 'seguridad', trim($request->user()->name.' '.$request->user()->last_name).' inicio sesion.');
         return redirect()->intended(route('dashboard'));
     }
-    public function destroy(Request $request){ $user = $request->user(); if ($user) { $this->audit($request, 'post', 'seguridad', trim($user->name.' '.$user->last_name).' cerro sesion.'); } Auth::logout(); $request->session()->invalidate(); $request->session()->regenerateToken(); return redirect()->route('login'); }
+    public function destroy(Request $request)
+    {
+        $user = $request->user();
+
+        if ($user) {
+            $this->audit($request, 'post', 'seguridad', trim($user->name.' '.$user->last_name).' cerro sesion.');
+            $this->expireTechnicianLocation($user);
+        }
+
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect()->route('login');
+    }
+
+    private function expireTechnicianLocation($user): void
+    {
+        if (! $user->hasRole('Tecnico') || ! $user->current_latitude || ! $user->current_longitude) {
+            return;
+        }
+
+        $user->forceFill([
+            'location_updated_at' => now()->subMinutes(config('colvatrack.location.max_age_minutes', 1) + 1),
+        ])->save();
+
+        try {
+            broadcast(new UserLocationUpdated($user->fresh('role')));
+        } catch (\Throwable $e) {
+            /* WebSocket no disponible */
+        }
+    }
     private function audit(Request $request, string $action, string $module, string $description): void
     {
         AuditLog::create([

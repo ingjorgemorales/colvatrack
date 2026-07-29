@@ -18,6 +18,8 @@ class UserLocationUpdated implements ShouldBroadcastNow
     public function broadcastWith(): array
     {
         $this->user->loadMissing('role');
+        $maxAge = now()->subMinutes(config('colvatrack.location.max_age_minutes', 1));
+        $isFresh = $this->user->location_updated_at?->greaterThan($maxAge) ?? false;
 
         return [
             'technician' => [
@@ -30,7 +32,7 @@ class UserLocationUpdated implements ShouldBroadcastNow
                 'current_latitude' => $this->user->current_latitude,
                 'current_longitude' => $this->user->current_longitude,
                 'location_updated_at' => $this->user->location_updated_at,
-                'location_is_fresh' => true,
+                'location_is_fresh' => $isFresh,
             ],
         ];
     }
