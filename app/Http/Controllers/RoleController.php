@@ -29,11 +29,15 @@ class RoleController extends Controller
 
     public function edit(Role $role)
     {
+        $this->authorizeBaseRoleManagement($role);
+
         return Inertia::render('Roles/Form', ['role' => $role->load('permissions'), 'permissions' => $this->permissions()]);
     }
 
     public function update(Request $request, Role $role)
     {
+        $this->authorizeBaseRoleManagement($role);
+
         $data = $request->validate(['name' => ['required','string','max:120', Rule::unique('roles','name')->ignore($role->id)], 'description' => ['nullable','string'], 'permissions' => ['array'], 'permissions.*' => ['exists:permissions,id']]);
         $permissions = $data['permissions'] ?? []; unset($data['permissions']);
         $role->update($data); $role->permissions()->sync($permissions);
@@ -49,5 +53,10 @@ class RoleController extends Controller
     private function permissions()
     {
         return Permission::orderBy('module')->orderBy('action')->get()->groupBy('module');
+    }
+
+    private function authorizeBaseRoleManagement(Role $role): void
+    {
+        abort_if(! auth()->user()?->hasRole('Superadministrador') && in_array($role->name, ['Superadministrador','Administrador','Tecnico','Conductor'], true), 403);
     }
 }

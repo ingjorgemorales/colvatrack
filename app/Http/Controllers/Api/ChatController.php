@@ -27,10 +27,15 @@ class ChatController extends Controller
         $user = $request->user();
 
         abort_unless(
-            $user->hasRole('Superadministrador', 'Administrador')
+            $this->canManageChat($user, 'ver')
                 || (int) $toolRequest->technician_id === (int) $user->id
                 || (int) $toolRequest->driver_id === (int) $user->id,
             403
         );
+    }
+
+    private function canManageChat($user, string $action): bool
+    {
+        return ! $user->hasRole('Tecnico', 'Conductor') && $user->canAccess('chat', $action);
     }
 }

@@ -10,7 +10,7 @@ class NotificationWebController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        $canSeeAll = $user->hasRole('Superadministrador', 'Administrador');
+        $canSeeAll = $this->canSeeAllNotifications($user);
         $perPage = min((int) $request->integer('per_page', 10), 100);
         $query = Notification::with('user.role')
             ->when(! $canSeeAll, fn ($q) => $q->where('user_id', $user->id));
@@ -62,7 +62,7 @@ class NotificationWebController extends Controller
     public function read(Notification $notification)
     {
         $user = auth()->user();
-        abort_unless($notification->user_id === $user->id || $user->hasRole('Superadministrador', 'Administrador'), 403);
+        abort_unless($notification->user_id === $user->id || $this->canSeeAllNotifications($user), 403);
         $notification->update(['read_at' => now()]);
         return back()->with('success', 'Notificacion marcada como leida.');
     }
@@ -71,5 +71,10 @@ class NotificationWebController extends Controller
     {
         Notification::where('user_id', $request->user()->id)->whereNull('read_at')->update(['read_at' => now()]);
         return back()->with('success', 'Notificaciones marcadas como leidas.');
+    }
+
+    private function canSeeAllNotifications($user): bool
+    {
+        return ! $user->hasRole('Tecnico', 'Conductor') && $user->canAccess('notificaciones', 'gestionar');
     }
 }

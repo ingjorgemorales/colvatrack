@@ -11,7 +11,7 @@ class ChatWebController extends Controller
     public function store(Request $request, ToolRequest $solicitude, ChatService $service)
     {
         $user = $request->user();
-        abort_unless($user->hasRole('Superadministrador', 'Administrador') || $solicitude->technician_id === $user->id || $solicitude->driver_id === $user->id, 403);
+        abort_unless($this->canManageChat($user, 'crear') || $solicitude->technician_id === $user->id || $solicitude->driver_id === $user->id, 403);
         $data = $request->validate(['message' => ['required', 'string', 'max:3000']]);
         $chat = $solicitude->chat()->firstOrFail();
         $service->send($chat, $user->id, $data['message']);
@@ -21,7 +21,7 @@ class ChatWebController extends Controller
     public function read(Request $request, ToolRequest $solicitude)
     {
         $user = $request->user();
-        abort_unless($user->hasRole('Superadministrador', 'Administrador') || $solicitude->technician_id === $user->id || $solicitude->driver_id === $user->id, 403);
+        abort_unless($this->canManageChat($user, 'editar') || $solicitude->technician_id === $user->id || $solicitude->driver_id === $user->id, 403);
         $solicitude->chat?->messages()->where('sender_id', '!=', $user->id)->whereNull('read_at')->update(['read_at' => now()]);
         Notification::query()
             ->where('user_id', $user->id)
@@ -30,5 +30,10 @@ class ChatWebController extends Controller
             ->where('data_json->tool_request_id', $solicitude->id)
             ->update(['read_at' => now()]);
         return back();
+    }
+
+    private function canManageChat($user, string $action): bool
+    {
+        return ! $user->hasRole('Tecnico', 'Conductor') && $user->canAccess('chat', $action);
     }
 }

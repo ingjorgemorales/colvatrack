@@ -46,11 +46,11 @@ Route::middleware(['auth', 'must.change.password', 'audit'])->group(function () 
     Route::patch('/perfil/password', [ProfileController::class, 'password'])->name('perfil.password')->middleware('permission:perfil,editar');
 
     Route::get('/inventario', [InventoryController::class, 'index'])->name('inventario.index')->middleware('permission:inventario,ver');
-    Route::get('/inventario/catalogo', [InventoryController::class, 'catalog'])->name('inventario.catalogo')->middleware('role:Superadministrador,Administrador');
+    Route::get('/inventario/catalogo', [InventoryController::class, 'catalog'])->name('inventario.catalogo')->middleware('permission:inventario,gestionar');
     Route::get('/inventario/movimientos', [InventoryController::class, 'movements'])->name('inventario.movimientos')->middleware('permission:inventario,ver');
-    Route::post('/inventario/items', [InventoryController::class, 'storeItem'])->name('inventario.items.store')->middleware('role:Superadministrador,Administrador');
-    Route::patch('/inventario/items/{item}', [InventoryController::class, 'updateItem'])->name('inventario.items.update')->middleware('role:Superadministrador,Administrador');
-    Route::patch('/inventario/items/{item}/status', [InventoryController::class, 'toggleItemStatus'])->name('inventario.items.status')->middleware('role:Superadministrador,Administrador');
+    Route::post('/inventario/items', [InventoryController::class, 'storeItem'])->name('inventario.items.store')->middleware('permission:inventario,crear');
+    Route::patch('/inventario/items/{item}', [InventoryController::class, 'updateItem'])->name('inventario.items.update')->middleware('permission:inventario,editar');
+    Route::patch('/inventario/items/{item}/status', [InventoryController::class, 'toggleItemStatus'])->name('inventario.items.status')->middleware('permission:inventario,editar');
     Route::patch('/inventario/stock', [InventoryController::class, 'updateStock'])->name('inventario.stock.update')->middleware('permission:inventario,editar');
     Route::delete('/inventario/stock', [InventoryController::class, 'removeStock'])->name('inventario.stock.remove')->middleware('permission:inventario,editar');
 
@@ -62,12 +62,38 @@ Route::middleware(['auth', 'must.change.password', 'audit'])->group(function () 
     Route::patch('/solicitudes/{solicitude}/chat/read', [ChatWebController::class, 'read'])->name('solicitudes.chat.read')->middleware('permission:chat,editar');
     Route::patch('/solicitudes/{solicitude}/status', [ToolRequestWebController::class, 'status'])->name('solicitudes.status')->middleware(['permission:solicitudes,editar', 'location.enabled']);
 
-    Route::resource('usuarios', UserController::class)->parameters(['usuarios' => 'usuario'])->except('show')->middleware('role:Superadministrador,Administrador');
-    Route::resource('roles', RoleController::class)->except('show')->middleware('role:Superadministrador');
-    Route::resource('vehiculos', VehicleController::class)->parameters(['vehiculos' => 'vehiculo'])->except('show')->middleware('role:Superadministrador,Administrador');
+    Route::get('/usuarios', [UserController::class, 'index'])->name('usuarios.index')->middleware('permission:usuarios,ver');
+    Route::get('/usuarios/create', [UserController::class, 'create'])->name('usuarios.create')->middleware('permission:usuarios,crear');
+    Route::post('/usuarios', [UserController::class, 'store'])->name('usuarios.store')->middleware('permission:usuarios,crear');
+    Route::get('/usuarios/{usuario}/edit', [UserController::class, 'edit'])->name('usuarios.edit')->middleware('permission:usuarios,editar');
+    Route::patch('/usuarios/{usuario}', [UserController::class, 'update'])->name('usuarios.update')->middleware('permission:usuarios,editar');
+    Route::put('/usuarios/{usuario}', [UserController::class, 'update'])->name('usuarios.update')->middleware('permission:usuarios,editar');
+    Route::delete('/usuarios/{usuario}', [UserController::class, 'destroy'])->name('usuarios.destroy')->middleware('permission:usuarios,eliminar');
+
+    Route::get('/roles', [RoleController::class, 'index'])->name('roles.index')->middleware('permission:roles,ver');
+    Route::get('/roles/create', [RoleController::class, 'create'])->name('roles.create')->middleware('permission:roles,crear');
+    Route::post('/roles', [RoleController::class, 'store'])->name('roles.store')->middleware('permission:roles,crear');
+    Route::get('/roles/{role}/edit', [RoleController::class, 'edit'])->name('roles.edit')->middleware('permission:roles,editar');
+    Route::patch('/roles/{role}', [RoleController::class, 'update'])->name('roles.update')->middleware('permission:roles,editar');
+    Route::put('/roles/{role}', [RoleController::class, 'update'])->name('roles.update')->middleware('permission:roles,editar');
+    Route::delete('/roles/{role}', [RoleController::class, 'destroy'])->name('roles.destroy')->middleware('permission:roles,eliminar');
+
+    Route::get('/vehiculos', [VehicleController::class, 'index'])->name('vehiculos.index')->middleware('permission:vehiculos,ver');
+    Route::get('/vehiculos/create', [VehicleController::class, 'create'])->name('vehiculos.create')->middleware('permission:vehiculos,crear');
+    Route::post('/vehiculos', [VehicleController::class, 'store'])->name('vehiculos.store')->middleware('permission:vehiculos,crear');
+    Route::get('/vehiculos/{vehiculo}/edit', [VehicleController::class, 'edit'])->name('vehiculos.edit')->middleware('permission:vehiculos,editar');
+    Route::patch('/vehiculos/{vehiculo}', [VehicleController::class, 'update'])->name('vehiculos.update')->middleware('permission:vehiculos,editar');
+    Route::put('/vehiculos/{vehiculo}', [VehicleController::class, 'update'])->name('vehiculos.update')->middleware('permission:vehiculos,editar');
+    Route::delete('/vehiculos/{vehiculo}', [VehicleController::class, 'destroy'])->name('vehiculos.destroy')->middleware('permission:vehiculos,eliminar');
     Route::get('/vehiculos/{vehiculo}/recorrido', [VehicleController::class, 'routeHistory'])->name('vehiculos.recorrido')->middleware('permission:vehiculos,recorrido');
-    Route::resource('configuracion/gps', GpsProviderController::class)->parameters(['gps' => 'gpsProvider'])->names('gps-providers')->except('show')->middleware('role:Superadministrador');
-    Route::post('/configuracion/gps/{gpsProvider}/test', [GpsProviderController::class, 'test'])->name('gps-providers.test')->middleware('role:Superadministrador');
+    Route::get('/configuracion/gps', [GpsProviderController::class, 'index'])->name('gps-providers.index')->middleware('permission:configuracion_gps,ver');
+    Route::get('/configuracion/gps/create', [GpsProviderController::class, 'create'])->name('gps-providers.create')->middleware('permission:configuracion_gps,crear');
+    Route::post('/configuracion/gps', [GpsProviderController::class, 'store'])->name('gps-providers.store')->middleware('permission:configuracion_gps,crear');
+    Route::get('/configuracion/gps/{gpsProvider}/edit', [GpsProviderController::class, 'edit'])->name('gps-providers.edit')->middleware('permission:configuracion_gps,editar');
+    Route::patch('/configuracion/gps/{gpsProvider}', [GpsProviderController::class, 'update'])->name('gps-providers.update')->middleware('permission:configuracion_gps,editar');
+    Route::put('/configuracion/gps/{gpsProvider}', [GpsProviderController::class, 'update'])->name('gps-providers.update')->middleware('permission:configuracion_gps,editar');
+    Route::delete('/configuracion/gps/{gpsProvider}', [GpsProviderController::class, 'destroy'])->name('gps-providers.destroy')->middleware('permission:configuracion_gps,eliminar');
+    Route::post('/configuracion/gps/{gpsProvider}/test', [GpsProviderController::class, 'test'])->name('gps-providers.test')->middleware('permission:configuracion_gps,gestionar');
 
 
     Route::get('/reportes', [ReportController::class, 'index'])->name('reportes.index')->middleware('permission:reportes,ver');

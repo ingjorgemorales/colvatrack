@@ -41,7 +41,7 @@ class InventoryController extends Controller
             'vehicles' => $vehicles,
             'filters' => ['search' => $search, 'tool_id' => $toolId, 'per_page' => $perPage],
             'items' => InventoryItem::with('category')->withSum('vehicleInventories', 'quantity_total')->where('status', 'active')->orderBy('name')->get(),
-            'canManageCatalog' => $user->hasRole('Superadministrador', 'Administrador'),
+            'canManageCatalog' => $this->canManageInventory($user, 'gestionar'),
         ]);
     }
 
@@ -92,7 +92,7 @@ class InventoryController extends Controller
 
     public function catalog(Request $request)
     {
-        abort_unless($request->user()->hasRole('Superadministrador', 'Administrador'), 403);
+        abort_unless($this->canManageInventory($request->user(), 'gestionar'), 403);
 
         $search = $request->get('search', '');
         $categoryId = $request->get('category_id', '');
@@ -124,7 +124,7 @@ class InventoryController extends Controller
 
     public function storeItem(Request $request)
     {
-        abort_unless($request->user()->hasRole('Superadministrador', 'Administrador'), 403);
+        abort_unless($this->canManageInventory($request->user(), 'crear'), 403);
         $data = $request->validate([
             'category_name' => ['required', 'string', 'max:120'],
             'name' => ['required', 'string', 'max:160'],
@@ -138,7 +138,7 @@ class InventoryController extends Controller
 
     public function updateItem(Request $request, InventoryItem $item)
     {
-        abort_unless($request->user()->hasRole('Superadministrador', 'Administrador'), 403);
+        abort_unless($this->canManageInventory($request->user(), 'editar'), 403);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:160'],
             'category_name' => ['required', 'string', 'max:120'],
@@ -152,7 +152,7 @@ class InventoryController extends Controller
 
     public function toggleItemStatus(Request $request, InventoryItem $item)
     {
-        abort_unless($request->user()->hasRole('Superadministrador', 'Administrador'), 403);
+        abort_unless($this->canManageInventory($request->user(), 'editar'), 403);
         $newStatus = $item->status === 'active' ? 'inactive' : 'active';
         $item->update(['status' => $newStatus]);
         return back()->with('success', "Herramienta {$item->name} " . ($newStatus === 'active' ? 'activada.' : 'desactivada.'));
@@ -160,7 +160,7 @@ class InventoryController extends Controller
 
     public function updateStock(Request $request, InventoryService $service)
     {
-        abort_unless($request->user()->hasRole('Superadministrador', 'Administrador'), 403);
+        abort_unless($this->canManageInventory($request->user(), 'editar'), 403);
         $data = $request->validate([
             'vehicle_id' => ['required', Rule::exists('vehicles', 'id')->where('status', 'active')],
             'inventory_item_id' => ['required', Rule::exists('inventory_items', 'id')->where('status', 'active')],
@@ -177,7 +177,7 @@ class InventoryController extends Controller
 
     public function removeStock(Request $request, InventoryService $service)
     {
-        abort_unless($request->user()->hasRole('Superadministrador', 'Administrador'), 403);
+        abort_unless($this->canManageInventory($request->user(), 'editar'), 403);
         $data = $request->validate([
             'vehicle_id' => ['required', Rule::exists('vehicles', 'id')->where('status', 'active')],
             'inventory_item_id' => ['required', Rule::exists('inventory_items', 'id')->where('status', 'active')],
@@ -190,5 +190,10 @@ class InventoryController extends Controller
         }
 
         return back()->with('success', 'Herramienta retirada del vehiculo.');
+    }
+
+    private function canManageInventory($user, string $action): bool
+    {
+        return ! $user->hasRole('Tecnico', 'Conductor') && $user->canAccess('inventario', $action);
     }
 }

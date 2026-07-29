@@ -240,7 +240,7 @@ class ToolRequestService
         $request->loadMissing('technician', 'driver');
         $status = $request->status;
 
-        if ($user->hasRole('Superadministrador', 'Administrador')) {
+        if ($this->canManageRequests($user, 'editar')) {
             return $this->adminTransitions()[$status] ?? [];
         }
 
@@ -441,6 +441,11 @@ class ToolRequestService
     private function adminTransitions(): array
     {
         return $this->transitions();
+    }
+
+    private function canManageRequests(User $user, string $action): bool
+    {
+        return ! $user->hasRole('Tecnico', 'Conductor') && $user->canAccess('solicitudes', $action);
     }
 
     private function history(ToolRequest $request, ?string $old, string $new, int $userId, ?string $comment): void
