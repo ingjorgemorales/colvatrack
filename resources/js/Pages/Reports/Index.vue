@@ -4,13 +4,15 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import { Download, FileSpreadsheet, Filter } from '@lucide/vue';
 import { computed, reactive, watch } from 'vue';
 
-const props = defineProps({ reports: Array, filters: Object, vehicles: Array, users: Array, categories: Array });
+const props = defineProps({ reports: Array, filters: Object, vehicles: Array, projects: Array, users: Array, roles: Array, categories: Array });
 const form = reactive({
   type: props.filters?.type || 'vehicles',
   date_from: props.filters?.date_from || '',
   date_to: props.filters?.date_to || '',
   vehicle_id: props.filters?.vehicle_id || '',
+  project_id: props.filters?.project_id || '',
   user_id: props.filters?.user_id || '',
+  role_id: props.filters?.role_id || '',
   category_id: props.filters?.category_id || '',
   status: props.filters?.status || '',
   read_status: props.filters?.read_status || '',
@@ -19,10 +21,13 @@ const form = reactive({
 const currentReport = computed(() => props.reports.find((report) => report.key === form.type) || props.reports[0]);
 const statusFilters = {
   vehicles: { label: 'Estado', options: ['active', 'inactive', 'maintenance'] },
+  projects: { label: 'Estado proyecto', options: ['active', 'inactive'] },
+  vehicle_reservations: { label: 'Estado reserva', options: ['active', 'released'] },
   users: { label: 'Estado', options: ['active', 'inactive'] },
   technicians: { label: 'Estado', options: ['active', 'inactive'] },
   drivers: { label: 'Estado', options: ['active', 'inactive'] },
   requests: { label: 'Estado', options: ['pendiente', 'aceptada', 'rechazada', 'vencida', 'en_camino', 'entregada', 'en_uso', 'para_recoger', 'recogida', 'finalizada', 'cancelada'] },
+  request_delays: { label: 'Estado demora', options: ['active', 'resolved'] },
   inventory: { label: 'Estado herramienta', options: ['active', 'inactive'] },
   movements: { label: 'Tipo de movimiento', options: ['stock_update', 'reserved', 'released', 'delivered', 'returned'] },
   audit: { label: 'Modulo', options: ['dashboard', 'mapa', 'solicitudes', 'chat', 'notificaciones', 'inventario', 'vehiculos', 'reportes', 'usuarios', 'roles', 'auditoria', 'perfil', 'configuracion_gps'] },
@@ -57,7 +62,9 @@ watch(() => form.type, () => {
             <div><label class="block text-sm font-medium text-slate-700">Hasta</label><input v-model="form.date_to" type="date" class="w-full rounded-md border border-slate-300 px-3 py-3" /></div>
           </div>
           <div><label class="block text-sm font-medium text-slate-700">Vehiculo</label><select v-model="form.vehicle_id" class="w-full rounded-md border border-slate-300 px-3 py-3"><option value="">Todos</option><option v-for="vehicle in vehicles" :key="vehicle.id" :value="vehicle.id">{{ vehicle.plate }}</option></select></div>
+          <div><label class="block text-sm font-medium text-slate-700">Proyecto</label><select v-model="form.project_id" class="w-full rounded-md border border-slate-300 px-3 py-3"><option value="">Todos</option><option v-for="project in projects" :key="project.id" :value="project.id">{{ project.name }}</option></select></div>
           <div><label class="block text-sm font-medium text-slate-700">Usuario</label><select v-model="form.user_id" class="w-full rounded-md border border-slate-300 px-3 py-3"><option value="">Todos</option><option v-for="user in users" :key="user.id" :value="user.id">{{ user.name }} {{ user.last_name }} - {{ user.role?.name }}</option></select></div>
+          <div><label class="block text-sm font-medium text-slate-700">Rol</label><select v-model="form.role_id" class="w-full rounded-md border border-slate-300 px-3 py-3"><option value="">Todos</option><option v-for="role in roles" :key="role.id" :value="role.id">{{ role.name }}</option></select></div>
           <div><label class="block text-sm font-medium text-slate-700">Categoria</label><select v-model="form.category_id" class="w-full rounded-md border border-slate-300 px-3 py-3"><option value="">Todas</option><option v-for="category in categories" :key="category.id" :value="category.id">{{ category.name }}</option></select></div>
           <div v-if="statusFilter"><label class="block text-sm font-medium text-slate-700">{{ statusFilter.label }}</label><select v-model="form.status" class="w-full rounded-md border border-slate-300 px-3 py-3"><option value="">Todos</option><option v-for="status in statusFilter.options" :key="status" :value="status">{{ status }}</option></select></div>
           <div v-if="form.type === 'notifications'"><label class="block text-sm font-medium text-slate-700">Lectura</label><select v-model="form.read_status" class="w-full rounded-md border border-slate-300 px-3 py-3"><option value="">Todas</option><option value="unread">No leidas</option><option value="read">Leidas</option></select></div>

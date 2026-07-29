@@ -6,11 +6,14 @@ use App\Models\AuditLog;
 use App\Models\InventoryItem;
 use App\Models\InventoryMovement;
 use App\Models\Notification;
+use App\Models\Project;
 use App\Models\ToolRequest;
+use App\Models\ToolRequestDelay;
 use App\Models\ToolRequestStatusHistory;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\VehicleLocation;
+use App\Models\VehicleReservation;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Arr;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -23,10 +26,13 @@ class ReportService
     {
         return [
             ['key' => 'vehicles', 'name' => 'Vehiculos', 'description' => 'Estado operativo, conductor asignado y ultima posicion GPS.'],
+            ['key' => 'projects', 'name' => 'Proyectos', 'description' => 'Proyectos creados, estado y vehiculos asociados.'],
+            ['key' => 'vehicle_reservations', 'name' => 'Reservas de vehiculos', 'description' => 'Reservas administrativas de vehiculos y liberaciones.'],
             ['key' => 'users', 'name' => 'Usuarios', 'description' => 'Usuarios, roles, estado y ultima ubicacion registrada.'],
             ['key' => 'technicians', 'name' => 'Tecnicos', 'description' => 'Detalle de tecnicos y actividad de ubicacion.'],
             ['key' => 'drivers', 'name' => 'Conductores', 'description' => 'Conductores, vehiculo asignado y estado.'],
             ['key' => 'requests', 'name' => 'Solicitudes', 'description' => 'Solicitudes de herramientas con items, estados y responsables.'],
+            ['key' => 'request_delays', 'name' => 'Demoras', 'description' => 'Solicitudes vencidas o en demora con motivo, tiempo y resolucion.'],
             ['key' => 'inventory', 'name' => 'Inventario', 'description' => 'Stock por vehiculo, herramienta y categoria.'],
             ['key' => 'movements', 'name' => 'Movimientos', 'description' => 'Movimientos de inventario y saldos.'],
             ['key' => 'gps_traces', 'name' => 'Trazas GPS', 'description' => 'Historial de posiciones GPS por vehiculo.'],
@@ -56,10 +62,13 @@ class ReportService
     {
         return match ($type) {
             'vehicles' => $this->vehicles($filters),
+            'projects' => $this->projects($filters),
+            'vehicle_reservations' => $this->vehicleReservations($filters),
             'users' => $this->users($filters),
             'technicians' => $this->users($filters, 'Tecnico'),
             'drivers' => $this->users($filters, 'Conductor'),
             'requests' => $this->requests($filters),
+            'request_delays' => $this->requestDelays($filters),
             'inventory' => $this->inventory($filters),
             'movements' => $this->movements($filters),
             'gps_traces' => $this->gpsTraces($filters),
@@ -72,20 +81,25 @@ class ReportService
 
     private function vehicles(array $filters): array
     {
-        $query = Vehicle::with(['driver', 'provider'])
+        $query = Vehicle::with(['driver', 'provider', 'project', 'activeReservation.reservedBy'])
             ->when($filters['vehicle_id'] ?? null, fn (Builder $q, $id) => $q->whereKey($id))
+            ->when($filters['project_id'] ?? null, fn (Builder $q, $id) => $q->where('project_id', $id))
             ->when($filters['status'] ?? null, fn (Builder $q, $status) => $q->where('status', $status))
             ->orderBy('plate');
         $this->dateRange($query, $filters, 'last_gps_datetime');
 
-        $headings = ['Placa', 'Marca', 'Modelo', 'Ano', 'Color', 'Estado', 'Conductor', 'Proveedor GPS', 'Latitud', 'Longitud', 'Velocidad', 'Evento GPS', 'Ultima fecha GPS', 'Direccion'];
+        $headings = ['Placa', 'Marca', 'Modelo', 'Proyecto', 'Ano', 'Color', 'Estado', 'Reservado', 'Motivo reserva', 'Reservado por', 'Conductor', 'Proveedor GPS', 'Latitud', 'Longitud', 'Velocidad', 'Evento GPS', 'Ultima fecha GPS', 'Direccion'];
         $rows = $query->get()->map(fn (Vehicle $v) => [
             $v->plate,
             $v->brand,
             $v->model,
+            $v->project?->name,
             $v->year,
             $v->color,
             $v->status,
+            $v->activeReservation ? 'si' : 'no',
+            $v->activeReservation?->reason,
+            trim($v->activeReservation?->reservedBy?->name.' '.$v->activeReservation?->reservedBy?->last_name),
             $v->driver?->name.' '.$v->driver?->last_name,
             $v->provider?->name,
             $v->current_latitude,
@@ -99,22 +113,75 @@ class ReportService
         return [$headings, $rows];
     }
 
+    private function projects(array $filters): array
+    {
+        $query = Project::with(['vehicles.driver'])
+            ->withCount('vehicles')
+            ->when($filters['project_id'] ?? null, fn (Builder $q, $id) => $q->whereKey($id))
+            ->when($filters['status'] ?? null, fn (Builder $q, $status) => $q->where('status', $status))
+            ->orderBy('name');
+        $this->dateRange($query, $filters, 'created_at');
+
+        $headings = ['Proyecto', 'Descripcion', 'Estado', 'Vehiculos asociados', 'Placas', 'Conductores', 'Creado en', 'Actualizado en'];
+        $rows = $query->get()->map(fn (Project $project) => [
+            $project->name,
+            $project->description,
+            $project->status,
+            $project->vehicles_count,
+            $project->vehicles->pluck('plate')->filter()->join(', '),
+            $project->vehicles->map(fn (Vehicle $vehicle) => trim($vehicle->driver?->name.' '.$vehicle->driver?->last_name))->filter()->join(', '),
+            $this->date($project->created_at),
+            $this->date($project->updated_at),
+        ])->all();
+
+        return [$headings, $rows];
+    }
+
+    private function vehicleReservations(array $filters): array
+    {
+        $query = VehicleReservation::with(['vehicle.project', 'reservedBy'])
+            ->when($filters['vehicle_id'] ?? null, fn (Builder $q, $id) => $q->where('vehicle_id', $id))
+            ->when($filters['project_id'] ?? null, fn (Builder $q, $id) => $q->whereHas('vehicle', fn (Builder $vehicle) => $vehicle->where('project_id', $id)))
+            ->when($filters['user_id'] ?? null, fn (Builder $q, $id) => $q->where('reserved_by', $id))
+            ->when($filters['status'] ?? null, fn (Builder $q, $status) => $q->where('status', $status))
+            ->latest('starts_at');
+        $this->dateRange($query, $filters, 'starts_at');
+
+        $headings = ['Vehiculo', 'Proyecto', 'Estado reserva', 'Motivo', 'Reservado por', 'Inicio', 'Fin programado', 'Liberado en', 'Comentario liberacion', 'Creado en'];
+        $rows = $query->get()->map(fn (VehicleReservation $reservation) => [
+            $reservation->vehicle?->plate,
+            $reservation->vehicle?->project?->name,
+            $reservation->status,
+            $reservation->reason,
+            trim($reservation->reservedBy?->name.' '.$reservation->reservedBy?->last_name),
+            $this->date($reservation->starts_at),
+            $this->date($reservation->ends_at),
+            $this->date($reservation->released_at),
+            $reservation->release_comment,
+            $this->date($reservation->created_at),
+        ])->all();
+
+        return [$headings, $rows];
+    }
+
     private function users(array $filters, ?string $roleName = null): array
     {
         $query = User::with(['role', 'assignedVehicle'])
             ->when($filters['user_id'] ?? null, fn (Builder $q, $id) => $q->whereKey($id))
+            ->when($filters['role_id'] ?? null, fn (Builder $q, $id) => $q->where('role_id', $id))
             ->when($filters['status'] ?? null, fn (Builder $q, $status) => $q->where('status', $status))
             ->when($roleName, fn (Builder $q) => $q->whereHas('role', fn (Builder $r) => $r->where('name', $roleName)))
             ->orderBy('name');
         $this->dateRange($query, $filters, 'created_at');
 
-        $headings = ['Nombre', 'Apellido', 'Email', 'Documento', 'Telefono', 'Rol', 'Estado', 'Vehiculo asignado', 'Ultimo login', 'Ubicacion actualizada', 'Latitud', 'Longitud'];
+        $headings = ['Nombre', 'Apellido', 'Email', 'Cedula', 'Telefono', 'Cargo', 'Rol', 'Estado', 'Vehiculo asignado', 'Ultimo login', 'Ubicacion actualizada', 'Latitud', 'Longitud'];
         $rows = $query->get()->map(fn (User $u) => [
             $u->name,
             $u->last_name,
             $u->email,
-            $u->document,
+            $u->cedula,
             $u->phone,
+            $u->cargo,
             $u->role?->name,
             $u->status,
             $u->assignedVehicle?->plate,
@@ -129,14 +196,15 @@ class ReportService
 
     private function requests(array $filters): array
     {
-        $query = ToolRequest::with(['vehicle', 'technician', 'driver', 'items.item'])
+        $query = ToolRequest::with(['vehicle.project', 'technician', 'driver', 'items.item', 'activeDelays'])
             ->when($filters['vehicle_id'] ?? null, fn (Builder $q, $id) => $q->where('vehicle_id', $id))
+            ->when($filters['project_id'] ?? null, fn (Builder $q, $id) => $q->whereHas('vehicle', fn (Builder $vehicle) => $vehicle->where('project_id', $id)))
             ->when($filters['status'] ?? null, fn (Builder $q, $status) => $q->where('status', $status))
             ->when($filters['user_id'] ?? null, fn (Builder $q, $id) => $q->where(fn (Builder $inner) => $inner->where('technician_id', $id)->orWhere('driver_id', $id)))
             ->latest('requested_at');
         $this->dateRange($query, $filters, 'requested_at');
 
-        $headings = ['Solicitud', 'Estado', 'Prioridad', 'Vehiculo', 'Tecnico', 'Conductor', 'Herramienta', 'Cantidad', 'Estado item', 'Fecha solicitud', 'Aceptada', 'Entregada', 'Recogida', 'Finalizada', 'Observacion'];
+        $headings = ['Solicitud', 'Estado', 'Prioridad', 'Vehiculo', 'Proyecto', 'Tiene demora activa', 'Motivo demora activa', 'Tecnico', 'Conductor', 'Herramienta', 'Cantidad', 'Estado item', 'Fecha solicitud', 'Aceptada', 'Entregada', 'Lista para recoger', 'Recogida', 'Finalizada', 'Cancelada', 'Observacion'];
         $rows = [];
         foreach ($query->get() as $request) {
             $items = $request->items->isEmpty() ? collect([null]) : $request->items;
@@ -146,6 +214,9 @@ class ReportService
                     $request->status,
                     $request->priority,
                     $request->vehicle?->plate,
+                    $request->vehicle?->project?->name,
+                    $request->activeDelays->isNotEmpty() ? 'si' : 'no',
+                    $request->activeDelays->pluck('reason')->join(' | '),
                     trim($request->technician?->name.' '.$request->technician?->last_name),
                     trim($request->driver?->name.' '.$request->driver?->last_name),
                     $item?->item?->name,
@@ -154,8 +225,10 @@ class ReportService
                     $this->date($request->requested_at),
                     $this->date($request->accepted_at),
                     $this->date($request->delivered_at),
+                    $this->date($request->ready_for_pickup_at),
                     $this->date($request->picked_up_at),
                     $this->date($request->finalized_at),
+                    $this->date($request->cancelled_at),
                     $request->observation,
                 ];
             }
@@ -164,21 +237,53 @@ class ReportService
         return [$headings, $rows];
     }
 
+    private function requestDelays(array $filters): array
+    {
+        $query = ToolRequestDelay::with(['request.vehicle.project', 'request.technician', 'request.driver'])
+            ->when($filters['vehicle_id'] ?? null, fn (Builder $q, $id) => $q->whereHas('request', fn (Builder $request) => $request->where('vehicle_id', $id)))
+            ->when($filters['project_id'] ?? null, fn (Builder $q, $id) => $q->whereHas('request.vehicle', fn (Builder $vehicle) => $vehicle->where('project_id', $id)))
+            ->when($filters['user_id'] ?? null, fn (Builder $q, $id) => $q->whereHas('request', fn (Builder $request) => $request->where(fn (Builder $inner) => $inner->where('technician_id', $id)->orWhere('driver_id', $id))))
+            ->when($filters['status'] ?? null, fn (Builder $q, $status) => $q->where('status', $status))
+            ->latest('detected_at');
+        $this->dateRange($query, $filters, 'detected_at');
+
+        $headings = ['Detectada en', 'Solicitud', 'Vehiculo', 'Proyecto', 'Tecnico', 'Conductor', 'Tipo', 'Estado demora', 'Estado solicitud al detectar', 'Minutos permitidos', 'Minutos transcurridos', 'Inicio del estado', 'Resuelta en', 'Motivo'];
+        $rows = $query->get()->map(fn (ToolRequestDelay $delay) => [
+            $this->date($delay->detected_at),
+            $delay->tool_request_id,
+            $delay->request?->vehicle?->plate,
+            $delay->request?->vehicle?->project?->name,
+            trim($delay->request?->technician?->name.' '.$delay->request?->technician?->last_name),
+            trim($delay->request?->driver?->name.' '.$delay->request?->driver?->last_name),
+            $delay->type,
+            $delay->status,
+            $delay->status_at_detection,
+            $delay->allowed_minutes,
+            $delay->elapsed_minutes,
+            $this->date($delay->state_started_at),
+            $this->date($delay->resolved_at),
+            $delay->reason,
+        ])->all();
+
+        return [$headings, $rows];
+    }
+
     private function inventory(array $filters): array
     {
-        $items = InventoryItem::with(['category', 'vehicleInventories.vehicle.driver'])
+        $items = InventoryItem::with(['category', 'vehicleInventories.vehicle.driver', 'vehicleInventories.vehicle.project'])
             ->when($filters['category_id'] ?? null, fn (Builder $q, $id) => $q->where('inventory_category_id', $id))
             ->when($filters['status'] ?? null, fn (Builder $q, $status) => $q->where('status', $status))
             ->orderBy('name')
             ->get();
 
-        $headings = ['Categoria', 'Herramienta', 'Unidad', 'Estado herramienta', 'Vehiculo', 'Conductor', 'Total', 'Disponible', 'Reservado', 'Entregado', 'Estado inventario'];
+        $headings = ['Categoria', 'Herramienta', 'Unidad', 'Estado herramienta', 'Vehiculo', 'Proyecto', 'Conductor', 'Total', 'Disponible', 'Reservado', 'Entregado', 'Estado inventario'];
         $rows = [];
         foreach ($items as $item) {
             $stocks = $item->vehicleInventories
-                ->when($filters['vehicle_id'] ?? null, fn ($collection, $id) => $collection->where('vehicle_id', (int) $id));
+                ->when($filters['vehicle_id'] ?? null, fn ($collection, $id) => $collection->where('vehicle_id', (int) $id))
+                ->when($filters['project_id'] ?? null, fn ($collection, $id) => $collection->filter(fn ($stock) => (int) $stock->vehicle?->project_id === (int) $id));
             if ($stocks->isEmpty()) {
-                $rows[] = [$item->category?->name, $item->name, $item->unit, $item->status, null, null, 0, 0, 0, 0, 'sin_stock'];
+                $rows[] = [$item->category?->name, $item->name, $item->unit, $item->status, null, null, null, 0, 0, 0, 0, 'sin_stock'];
                 continue;
             }
             foreach ($stocks as $stock) {
@@ -188,6 +293,7 @@ class ReportService
                     $item->unit,
                     $item->status,
                     $stock->vehicle?->plate,
+                    $stock->vehicle?->project?->name,
                     trim($stock->vehicle?->driver?->name.' '.$stock->vehicle?->driver?->last_name),
                     $stock->quantity_total,
                     $stock->quantity_available,
@@ -205,6 +311,7 @@ class ReportService
     {
         $query = InventoryMovement::with(['vehicle', 'item.category', 'creator'])
             ->when($filters['vehicle_id'] ?? null, fn (Builder $q, $id) => $q->where('vehicle_id', $id))
+            ->when($filters['project_id'] ?? null, fn (Builder $q, $id) => $q->whereHas('vehicle', fn (Builder $vehicle) => $vehicle->where('project_id', $id)))
             ->when($filters['category_id'] ?? null, fn (Builder $q, $id) => $q->whereHas('item', fn (Builder $item) => $item->where('inventory_category_id', $id)))
             ->when($filters['status'] ?? null, fn (Builder $q, $type) => $q->where('movement_type', $type))
             ->latest('created_at');
@@ -230,16 +337,18 @@ class ReportService
 
     private function gpsTraces(array $filters): array
     {
-        $query = VehicleLocation::with(['vehicle.driver'])
+        $query = VehicleLocation::with(['vehicle.driver', 'vehicle.project'])
             ->when($filters['vehicle_id'] ?? null, fn (Builder $q, $id) => $q->where('vehicle_id', $id))
+            ->when($filters['project_id'] ?? null, fn (Builder $q, $id) => $q->whereHas('vehicle', fn (Builder $vehicle) => $vehicle->where('project_id', $id)))
             ->latest('gps_datetime')
             ->limit(10000);
         $this->dateRange($query, $filters, 'gps_datetime');
 
-        $headings = ['Fecha GPS', 'Vehiculo', 'Conductor', 'Latitud', 'Longitud', 'Velocidad', 'Rumbo', 'Evento', 'Odometro', 'Direccion', 'Registrado en'];
+        $headings = ['Fecha GPS', 'Vehiculo', 'Proyecto', 'Conductor', 'Latitud', 'Longitud', 'Velocidad', 'Rumbo', 'Evento', 'Odometro', 'Direccion', 'Registrado en'];
         $rows = $query->get()->map(fn (VehicleLocation $l) => [
             $this->date($l->gps_datetime),
             $l->vehicle?->plate,
+            $l->vehicle?->project?->name,
             trim($l->vehicle?->driver?->name.' '.$l->vehicle?->driver?->last_name),
             $l->latitude,
             $l->longitude,
