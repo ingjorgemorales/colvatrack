@@ -62,7 +62,7 @@ class VehicleController extends Controller
 
     public function destroy(Vehicle $vehiculo)
     {
-        $vehiculo->update(['status' => 'inactive']);
+        $vehiculo->update(['status' => 'inactive', 'driver_id' => null]);
         return back()->with('success', 'Vehiculo desactivado.');
     }
 
@@ -159,6 +159,10 @@ class VehicleController extends Controller
                     'driver_id' => 'Este conductor ya esta asignado al vehiculo '.$assignedVehicle->plate.'.',
                 ]);
             }
+        }
+
+        if ($data['status'] === 'inactive') {
+            $data['driver_id'] = null;
         }
 
         return $data;

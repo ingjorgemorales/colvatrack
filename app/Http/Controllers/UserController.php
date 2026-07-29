@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
 
@@ -44,7 +45,7 @@ class UserController extends Controller
 
     public function create(Request $request)
     {
-        return Inertia::render('Users/Form', ['user' => null, 'roles' => $this->availableRoles($request->user()), 'vehicles' => Vehicle::orderBy('plate')->get()]);
+        return Inertia::render('Users/Form', ['user' => null, 'roles' => $this->availableRoles($request->user()), 'vehicles' => $this->availableVehicles()]);
     }
 
     public function store(Request $request)
@@ -57,11 +58,12 @@ class UserController extends Controller
             'must_change_password' => ['boolean'], 'vehicle_id' => ['nullable', 'exists:vehicles,id'],
         ]);
         $data['email'] = strtolower(trim($data['email']));
-        $vehicleId = $data['vehicle_id'] ?? null; unset($data['vehicle_id']);
+        $vehicleId = $this->validatedVehicleAssignment($data);
+        unset($data['vehicle_id']);
         $plainPassword = Str::password(12);
         $data['password'] = Hash::make($plainPassword); $data['must_change_password'] = true;
         $user = User::create($data);
-        if ($vehicleId) { Vehicle::where('driver_id', $user->id)->update(['driver_id' => null]); Vehicle::whereKey($vehicleId)->update(['driver_id' => $user->id]); }
+        $this->syncDriverVehicle($user, $vehicleId);
         try { Mail::to($user->email)->send(new WelcomeMail($user->name, $user->email, $plainPassword)); } catch (\Throwable $e) { \Illuminate\Support\Facades\Log::warning('No fue posible enviar correo de bienvenida', ['to' => $user->email, 'error' => $e->getMessage()]); }
         return redirect()->route('usuarios.index')->with('success', 'Usuario creado.');
     }
@@ -70,7 +72,7 @@ class UserController extends Controller
     {
         $this->authorizeManageUser(auth()->user(), $usuario);
 
-        return Inertia::render('Users/Form', ['user' => $usuario->load('assignedVehicle'), 'roles' => $this->availableRoles(auth()->user()), 'vehicles' => Vehicle::orderBy('plate')->get()]);
+        return Inertia::render('Users/Form', ['user' => $usuario->load('assignedVehicle'), 'roles' => $this->availableRoles(auth()->user()), 'vehicles' => $this->availableVehicles($usuario)]);
     }
 
     public function update(Request $request, User $usuario)
@@ -84,11 +86,12 @@ class UserController extends Controller
             'status' => ['required', 'in:active,inactive'], 'password' => ['nullable', 'confirmed', Password::min(8)->mixedCase()->numbers()->symbols()],
             'must_change_password' => ['boolean'], 'vehicle_id' => ['nullable', 'exists:vehicles,id'],
         ]);
-        $vehicleId = $data['vehicle_id'] ?? null; unset($data['vehicle_id'], $data['password_confirmation']);
+        $vehicleId = $this->validatedVehicleAssignment($data, $usuario);
+        unset($data['vehicle_id'], $data['password_confirmation']);
         if (!empty($data['password'])) { $data['password'] = Hash::make($data['password']); } else { unset($data['password']); }
         $data['must_change_password'] = (bool) ($data['must_change_password'] ?? false);
         $usuario->update($data);
-        Vehicle::where('driver_id', $usuario->id)->update(['driver_id' => null]); if ($vehicleId) { Vehicle::whereKey($vehicleId)->update(['driver_id' => $usuario->id]); }
+        $this->syncDriverVehicle($usuario, $vehicleId);
         return redirect()->route('usuarios.index')->with('success', 'Usuario actualizado.');
     }
 
@@ -96,7 +99,54 @@ class UserController extends Controller
     {
         $this->authorizeManageUser(auth()->user(), $usuario);
         $usuario->update(['status' => 'inactive']);
+        $this->releaseDriverVehicle($usuario);
         return back()->with('success', 'Usuario desactivado.');
+    }
+
+    private function availableVehicles(?User $user = null)
+    {
+        return Vehicle::query()
+            ->where('status', 'active')
+            ->where(fn ($q) => $q
+                ->whereNull('driver_id')
+                ->when($user, fn ($query) => $query->orWhere('driver_id', $user->id)))
+            ->orderBy('plate')
+            ->get();
+    }
+
+    private function validatedVehicleAssignment(array $data, ?User $user = null): ?int
+    {
+        $vehicleId = $data['vehicle_id'] ?? null;
+        $conductorRoleId = Role::where('name', 'Conductor')->value('id');
+
+        if (! $vehicleId || (int) $data['role_id'] !== (int) $conductorRoleId || $data['status'] !== 'active') {
+            return null;
+        }
+
+        $vehicle = Vehicle::whereKey($vehicleId)->where('status', 'active')->first();
+        if (! $vehicle) {
+            throw ValidationException::withMessages(['vehicle_id' => 'El vehiculo seleccionado no esta activo o no existe.']);
+        }
+
+        if ($vehicle->driver_id && (! $user || (int) $vehicle->driver_id !== (int) $user->id)) {
+            throw ValidationException::withMessages(['vehicle_id' => 'El vehiculo '.$vehicle->plate.' ya tiene otro conductor asignado.']);
+        }
+
+        return (int) $vehicleId;
+    }
+
+    private function syncDriverVehicle(User $user, ?int $vehicleId): void
+    {
+        $this->releaseDriverVehicle($user);
+
+        if ($vehicleId) {
+            Vehicle::whereKey($vehicleId)->update(['driver_id' => $user->id]);
+        }
+    }
+
+    private function releaseDriverVehicle(User $user): void
+    {
+        Vehicle::where('driver_id', $user->id)->update(['driver_id' => null]);
     }
 
     private function availableRoles(User $actor)

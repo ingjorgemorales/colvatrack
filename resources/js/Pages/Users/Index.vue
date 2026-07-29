@@ -9,7 +9,10 @@ const status = ref(props.filters?.status ?? '');
 const perPage = ref(props.filters?.per_page ?? 10);
 const apply = () => router.get('/usuarios', { search: search.value || undefined, status: status.value || undefined, per_page: perPage.value || undefined }, { preserveState: true, replace: true });
 const clearFilters = () => { search.value = ''; status.value = ''; perPage.value = 10; router.get('/usuarios', {}, { preserveState: true, replace: true }); };
-const deactivate = (user) => { if(confirm(`Desactivar usuario ${user.email}?`)) router.delete(`/usuarios/${user.id}`); };
+const deactivate = (user) => {
+  const vehicleText = user.assigned_vehicle?.plate ? `\n\nSe liberara el vehiculo ${user.assigned_vehicle.plate}.` : '';
+  if(confirm(`Desactivar usuario ${user.email}?${vehicleText}`)) router.delete(`/usuarios/${user.id}`);
+};
 </script>
 <template>
   <Head title="Usuarios" />

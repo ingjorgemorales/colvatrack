@@ -11,7 +11,10 @@ const movement = ref(props.filters?.movement ?? '');
 const perPage = ref(props.filters?.per_page ?? 10);
 const apply = () => router.get('/vehiculos', { search: search.value, status: status.value, movement: movement.value, per_page: perPage.value }, { preserveState: true, replace: true });
 const clearFilters = () => { search.value = ''; status.value = ''; movement.value = ''; perPage.value = 10; router.get('/vehiculos', {}, { preserveState: true, replace: true }); };
-const deactivate = (vehicle) => { if (confirm(`Desactivar vehiculo ${vehicle.plate}?`)) router.delete(`/vehiculos/${vehicle.id}`); };
+const deactivate = (vehicle) => {
+  const driverText = vehicle.driver?.name ? `\n\nSe liberara el conductor ${vehicle.driver.name} ${vehicle.driver.last_name ?? ''}.` : '';
+  if (confirm(`Desactivar vehiculo ${vehicle.plate}?${driverText}`)) router.delete(`/vehiculos/${vehicle.id}`);
+};
 </script>
 
 <template>
