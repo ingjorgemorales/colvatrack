@@ -6,6 +6,7 @@ const page = usePage();
 const flash = computed(() => page.props.flash ?? {});
 const showPassword = ref(false);
 const acceptPolicy = ref(false);
+const policyUrl = 'https://colvatel.com.co/wp-content/uploads/2025/07/E01.D05.-Politica-de-Datos-Personales.pdf';
 const form = useForm({ email: '', password: '', remember: false });
 const submit = () => form.post('/login');
 </script>
@@ -21,7 +22,7 @@ const submit = () => form.post('/login');
         <label class="block"><span class="text-sm font-medium text-slate-700">Correo</span><input v-model="form.email" type="email" placeholder="usuario@colvatel.com" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-3 outline-none focus:border-[#123f6e]" required /></label>
         <label class="block"><span class="text-sm font-medium text-slate-700">Contraseña</span><div class="relative mt-1"><input v-model="form.password" :type="showPassword ? 'text' : 'password'" placeholder="Ingrese su contraseña" class="w-full rounded-md border border-slate-300 px-3 py-3 pr-10 outline-none focus:border-[#123f6e]" required /><button type="button" @click="showPassword = !showPassword" class="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-slate-500 hover:text-slate-700"><component :is="showPassword ? EyeOff : Eye" class="h-5 w-5" /></button></div></label>
         <p v-if="form.errors.email" class="text-sm text-red-600">{{ form.errors.email }}</p>
-        <label class="flex items-start gap-2 text-xs text-slate-600"><input v-model="acceptPolicy" type="checkbox" class="mt-0.5 shrink-0 rounded border-slate-300 text-[#123f6e] focus:ring-[#123f6e]" /><span>Acepto la <a href="https://colvatel.com.co/wp-content/uploads/2025/07/E01.D05.-Politica-de-Datos-Personales.pdf" target="_blank" class="font-medium text-[#123f6e] underline hover:text-[#0d3158]">politica de tratamiento de datos personales</a> y los <a href="/terminos" class="font-medium text-[#123f6e] underline hover:text-[#0d3158]">terminos y condiciones</a>.</span></label>
+        <label class="flex items-start gap-2 text-xs text-slate-600"><input v-model="acceptPolicy" type="checkbox" class="mt-0.5 shrink-0 rounded border-slate-300 text-[#123f6e] focus:ring-[#123f6e]" /><span>Acepto la <a :href="policyUrl" class="font-medium text-[#123f6e] underline hover:text-[#0d3158]">politica de tratamiento de datos personales</a> y los <a :href="policyUrl" class="font-medium text-[#123f6e] underline hover:text-[#0d3158]">terminos y condiciones</a>.</span></label>
         <button class="w-full rounded-md bg-[#123f6e] px-4 py-3 font-semibold text-white hover:bg-[#0d3158]" :disabled="form.processing || !acceptPolicy">Ingresar</button>
         <Link href="/forgot-password" class="block text-center text-sm font-medium text-[#123f6e]">Recuperar contrasena</Link>
       </form>
