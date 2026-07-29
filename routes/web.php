@@ -12,11 +12,13 @@ use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\NotificationWebController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\ToolRequestWebController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VehicleController;
+use App\Http\Controllers\VehicleReservationController;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/dashboard');
@@ -79,12 +81,20 @@ Route::middleware(['auth', 'must.change.password', 'audit'])->group(function () 
     Route::delete('/roles/{role}', [RoleController::class, 'destroy'])->name('roles.destroy')->middleware('permission:roles,eliminar');
 
     Route::get('/vehiculos', [VehicleController::class, 'index'])->name('vehiculos.index')->middleware('permission:vehiculos,ver');
+    Route::get('/vehiculos/proyectos', [ProjectController::class, 'index'])->name('proyectos.index')->middleware('permission:vehiculos,ver');
+    Route::get('/vehiculos/proyectos/create', [ProjectController::class, 'create'])->name('proyectos.create')->middleware('permission:vehiculos,crear');
+    Route::post('/vehiculos/proyectos', [ProjectController::class, 'store'])->name('proyectos.store')->middleware('permission:vehiculos,crear');
+    Route::get('/vehiculos/proyectos/{project}/edit', [ProjectController::class, 'edit'])->name('proyectos.edit')->middleware('permission:vehiculos,editar');
+    Route::patch('/vehiculos/proyectos/{project}', [ProjectController::class, 'update'])->name('proyectos.update')->middleware('permission:vehiculos,editar');
+    Route::delete('/vehiculos/proyectos/{project}', [ProjectController::class, 'destroy'])->name('proyectos.destroy')->middleware('permission:vehiculos,eliminar');
     Route::get('/vehiculos/create', [VehicleController::class, 'create'])->name('vehiculos.create')->middleware('permission:vehiculos,crear');
     Route::post('/vehiculos', [VehicleController::class, 'store'])->name('vehiculos.store')->middleware('permission:vehiculos,crear');
     Route::get('/vehiculos/{vehiculo}/edit', [VehicleController::class, 'edit'])->name('vehiculos.edit')->middleware('permission:vehiculos,editar');
     Route::patch('/vehiculos/{vehiculo}', [VehicleController::class, 'update'])->name('vehiculos.update')->middleware('permission:vehiculos,editar');
     Route::put('/vehiculos/{vehiculo}', [VehicleController::class, 'update'])->name('vehiculos.update')->middleware('permission:vehiculos,editar');
     Route::delete('/vehiculos/{vehiculo}', [VehicleController::class, 'destroy'])->name('vehiculos.destroy')->middleware('permission:vehiculos,eliminar');
+    Route::post('/vehiculos/{vehicle}/reservas', [VehicleReservationController::class, 'store'])->name('vehiculos.reservas.store')->middleware('permission:vehiculos,editar');
+    Route::patch('/vehiculos/{vehicle}/reservas/liberar', [VehicleReservationController::class, 'release'])->name('vehiculos.reservas.release')->middleware('permission:vehiculos,editar');
     Route::get('/vehiculos/{vehiculo}/recorrido', [VehicleController::class, 'routeHistory'])->name('vehiculos.recorrido')->middleware('permission:vehiculos,recorrido');
     Route::get('/configuracion/gps', [GpsProviderController::class, 'index'])->name('gps-providers.index')->middleware('permission:configuracion_gps,ver');
     Route::get('/configuracion/gps/create', [GpsProviderController::class, 'create'])->name('gps-providers.create')->middleware('permission:configuracion_gps,crear');

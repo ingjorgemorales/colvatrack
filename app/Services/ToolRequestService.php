@@ -41,6 +41,10 @@ class ToolRequestService
             if ($enforceSingleActiveTechnician) {
                 $this->assertVehicleInsideTechnicianRequestRadius($vehicle, $data);
             }
+            $activeReservation = $vehicle->activeReservation()->lockForUpdate()->first();
+            if ($activeReservation) {
+                throw new InvalidArgumentException('El vehiculo '.$vehicle->plate.' no esta disponible porque se encuentra reservado por administracion.');
+            }
             $activeRequest = ToolRequest::where('vehicle_id', $vehicle->id)->activeForVehicle()->lockForUpdate()->first();
             if ($activeRequest) {
                 throw new InvalidArgumentException('El vehiculo '.$vehicle->plate.' no esta disponible porque tiene la solicitud #'.$activeRequest->id.' en estado '.$activeRequest->status.'.');

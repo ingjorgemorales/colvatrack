@@ -97,11 +97,12 @@ function isTechnicianLocationFresh(t) {
 function vehicleIcon(v) {
   const fresh = Boolean(v.gps_is_fresh);
   const occupied = Boolean(v.is_occupied);
+  const reserved = Boolean(v.is_reserved);
   const moving = Boolean(v.is_moving);
   const heading = Number(v.current_heading || 0);
   const plate = escapeHtml(v.plate);
   const stateClass = occupied ? 'is-occupied' : (fresh ? 'is-fresh' : 'is-stale');
-  const title = occupied ? 'Vehiculo ocupado' : (fresh ? 'Datos GPS recientes' : 'GPS sin datos recientes');
+  const title = reserved ? 'Vehiculo reservado' : (occupied ? 'Vehiculo ocupado' : (fresh ? 'Datos GPS recientes' : 'GPS sin datos recientes'));
 
   return L.divIcon({
     className: '',
@@ -121,7 +122,7 @@ function vehicleIcon(v) {
           </svg>
         </div>
         <div class="vehicle-marker__plate">${plate}</div>
-        ${occupied ? '<div class="vehicle-marker__badge">Ocupado</div>' : ''}
+        ${occupied ? `<div class="vehicle-marker__badge">${reserved ? 'Reservado' : 'Ocupado'}</div>` : ''}
       </div>
     `,
   });
@@ -149,8 +150,11 @@ function vehiclePopup(v) {
   const inv = (v.inventory ?? []).slice(0, 5).map(i => `<li>${escapeHtml(i.item?.name ?? 'Item')}: ${escapeHtml(i.quantity_available)} disp.</li>`).join('');
   const fresh = Boolean(v.gps_is_fresh);
   const occupied = Boolean(v.is_occupied);
+  const reserved = Boolean(v.is_reserved);
   const state = fresh ? 'GPS con datos recientes' : 'GPS sin datos recientes';
-  const availabilityText = occupied ? `Ocupado por solicitud #${escapeHtml(v.active_tool_request?.id ?? '-')}` : 'Disponible para solicitud';
+  const availabilityText = reserved
+    ? `Reservado por administracion`
+    : (occupied ? `Ocupado por solicitud #${escapeHtml(v.active_tool_request?.id ?? '-')}` : 'Disponible para solicitud');
   const nearestDistance = nearestTechnicianDistance(v);
   const techDistance = nearestDistance === null ? '-' : `${Math.round(nearestDistance)} m`;
   return `
@@ -159,8 +163,11 @@ function vehiclePopup(v) {
       <div class="vehicle-popup__status ${fresh ? 'is-fresh' : 'is-stale'}">${state}</div>
       <div class="vehicle-popup__status ${occupied ? 'is-occupied' : 'is-available'}">${availabilityText}</div>
       <dl>
+        <div><dt>Proyecto</dt><dd>${escapeHtml(v.project?.name ?? 'Sin asignar')}</dd></div>
         <div><dt>Conductor</dt><dd>${escapeHtml(v.driver?.name ?? 'Sin asignar')}</dd></div>
-        ${occupied ? `<div><dt>Solicitado por</dt><dd>${escapeHtml(v.active_tool_request?.technician?.name ?? '-')}</dd></div>` : ''}
+        ${v.active_tool_request ? `<div><dt>Solicitado por</dt><dd>${escapeHtml(v.active_tool_request?.technician?.name ?? '-')}</dd></div>` : ''}
+        ${reserved ? `<div><dt>Motivo reserva</dt><dd>${escapeHtml(v.active_reservation?.reason ?? '-')}</dd></div>` : ''}
+        ${reserved ? `<div><dt>Reservado por</dt><dd>${escapeHtml(v.active_reservation?.reserved_by?.name ?? '-')}</dd></div>` : ''}
         <div><dt>Telefono</dt><dd>${escapeHtml(v.driver?.phone ?? '-')}</dd></div>
         <div><dt>Dist. tecnico</dt><dd>${escapeHtml(techDistance)}</dd></div>
         <div><dt>Velocidad GPS</dt><dd>${escapeHtml(v.current_speed ?? 0)} km/h</dd></div>

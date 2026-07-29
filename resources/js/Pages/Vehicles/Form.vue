@@ -2,9 +2,9 @@
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { ArrowLeft, Save } from '@lucide/vue';
-const props = defineProps({ vehicle: Object, drivers: Array, providers: Array });
+const props = defineProps({ vehicle: Object, drivers: Array, providers: Array, projects: Array });
 const isEdit = !!props.vehicle;
-const form = useForm({ plate: props.vehicle?.plate ?? '', brand: props.vehicle?.brand ?? '', model: props.vehicle?.model ?? '', year: props.vehicle?.year ?? '', color: props.vehicle?.color ?? '', status: props.vehicle?.status ?? 'active', gps_provider_id: props.vehicle?.gps_provider_id ?? '', external_gps_id: props.vehicle?.external_gps_id ?? '', driver_id: props.vehicle?.driver_id ?? '', current_latitude: props.vehicle?.current_latitude ?? '', current_longitude: props.vehicle?.current_longitude ?? '', current_speed: props.vehicle?.current_speed ?? '', current_heading: props.vehicle?.current_heading ?? '', current_address: props.vehicle?.current_address ?? '', imei: props.vehicle?.imei ?? '', odometer: props.vehicle?.odometer ?? '' });
+const form = useForm({ plate: props.vehicle?.plate ?? '', brand: props.vehicle?.brand ?? '', model: props.vehicle?.model ?? '', year: props.vehicle?.year ?? '', color: props.vehicle?.color ?? '', status: props.vehicle?.status ?? 'active', gps_provider_id: props.vehicle?.gps_provider_id ?? '', project_id: props.vehicle?.project_id ?? '', external_gps_id: props.vehicle?.external_gps_id ?? '', driver_id: props.vehicle?.driver_id ?? '', current_latitude: props.vehicle?.current_latitude ?? '', current_longitude: props.vehicle?.current_longitude ?? '', current_speed: props.vehicle?.current_speed ?? '', current_heading: props.vehicle?.current_heading ?? '', current_address: props.vehicle?.current_address ?? '', imei: props.vehicle?.imei ?? '', odometer: props.vehicle?.odometer ?? '' });
 const submit = () => isEdit ? form.patch(`/vehiculos/${props.vehicle.id}`) : form.post('/vehiculos');
 </script>
 <template>
@@ -19,6 +19,7 @@ const submit = () => isEdit ? form.patch(`/vehiculos/${props.vehicle.id}`) : for
         <label><span>Ano</span><input v-model="form.year" type="number" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-3" /></label>
         <label><span>Color</span><input v-model="form.color" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-3" /></label>
         <label><span>Estado</span><select v-model="form.status" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-3"><option value="active">Activo</option><option value="maintenance">Mantenimiento</option><option value="inactive">Inactivo</option></select></label>
+        <label><span>Proyecto</span><select v-model="form.project_id" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-3"><option value="">Sin proyecto</option><option v-for="project in projects" :key="project.id" :value="project.id">{{ project.name }}</option></select></label>
         <label><span>Proveedor GPS</span><select v-model="form.gps_provider_id" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-3"><option value="">Sin proveedor</option><option v-for="p in providers" :key="p.id" :value="p.id">{{ p.name }}</option></select></label>
         <label><span>External GPS ID</span><input v-model="form.external_gps_id" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-3" /></label>
         <label><span>Conductor asignado</span><select v-model="form.driver_id" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-3"><option value="">Sin conductor</option><option v-for="d in drivers" :key="d.id" :value="d.id">{{ d.name }} {{ d.last_name }}</option></select><small class="mt-1 block text-xs text-slate-500">Solo aparecen conductores activos sin otro vehiculo asignado.</small></label>

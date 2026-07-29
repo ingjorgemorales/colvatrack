@@ -12,6 +12,7 @@ const requestRadiusText = computed(() => `${(Number(requestRadiusMeters.value) /
 const hasActiveTechnicianRequest = computed(() => Boolean(props.activeTechnicianRequest));
 const vehicle = computed(() => props.vehicles.find(v => Number(v.id) === Number(form.vehicle_id)) ?? null);
 const selectedIsOccupied = computed(() => Boolean(vehicle.value?.is_occupied));
+const selectedIsReserved = computed(() => Boolean(vehicle.value?.is_reserved));
 const hasUserLocation = computed(() => Boolean(props.userLocation?.latitude && props.userLocation?.longitude));
 const availableItems = computed(() => selectedIsOccupied.value ? [] : (vehicle.value?.inventory?.filter(i => Number(i.quantity_available) > 0) ?? []));
 const nearbyVehicles = computed(() => props.vehicles
@@ -28,6 +29,11 @@ function maxFor(itemId){ const row = availableItems.value.find(i => Number(i.inv
 function formatDistance(meters) {
   if (meters === null || meters === undefined) return 'Sin GPS';
   return Number(meters) >= 1000 ? `${(Number(meters) / 1000).toFixed(2)} km` : `${Number(meters)} m`;
+}
+function availabilityLabel(v) {
+  if (v.is_reserved) return 'Reservado';
+  if (v.active_tool_request) return `No disponible, solicitud #${v.active_tool_request.id}`;
+  return formatDistance(v.distance_meters);
 }
 function selectVehicle(vehicleId) {
   const target = props.vehicles.find(v => Number(v.id) === Number(vehicleId));
@@ -69,10 +75,11 @@ function selectVehicle(vehicleId) {
                 <div class="font-bold text-slate-950">{{ v.plate }}</div>
                 <div class="text-sm text-slate-500">{{ v.driver?.name ?? 'Sin conductor' }}</div>
               </div>
-              <span class="rounded px-2 py-1 text-xs font-bold" :class="v.is_occupied ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'">{{ v.is_occupied ? 'Ocupado' : formatDistance(v.distance_meters) }}</span>
+              <span class="rounded px-2 py-1 text-xs font-bold" :class="v.is_occupied ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'">{{ v.is_reserved ? 'Reservado' : (v.is_occupied ? 'Ocupado' : formatDistance(v.distance_meters)) }}</span>
             </div>
             <div class="mt-3 flex items-center gap-2 text-xs text-slate-600"><MapPin class="h-4 w-4 text-emerald-700" /> {{ v.available_items_count }} herramientas disponibles</div>
-            <div v-if="v.is_occupied" class="mt-2 text-xs font-semibold text-amber-800">Solicitud activa #{{ v.active_tool_request?.id }} en estado {{ v.active_tool_request?.status }}</div>
+            <div v-if="v.active_tool_request" class="mt-2 text-xs font-semibold text-amber-800">Solicitud activa #{{ v.active_tool_request?.id }} en estado {{ v.active_tool_request?.status }}</div>
+            <div v-if="v.is_reserved" class="mt-2 text-xs font-semibold text-amber-800">Reservado por administracion: {{ v.active_reservation?.reason }}</div>
           </button>
         </div>
 
@@ -83,11 +90,11 @@ function selectVehicle(vehicleId) {
 
       <form class="space-y-5" @submit.prevent="!hasActiveTechnicianRequest && form.post('/solicitudes')">
         <div class="grid gap-4 md:grid-cols-2">
-          <label><span>Vehiculo</span><select v-model="form.vehicle_id" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-3"><option value="">Seleccionar</option><option v-for="v in vehicles" :key="v.id" :value="v.id" :disabled="v.is_occupied">{{ v.plate }} - {{ v.is_occupied ? `No disponible, solicitud #${v.active_tool_request?.id}` : formatDistance(v.distance_meters) }} - {{ v.driver?.name ?? 'sin conductor' }}</option></select></label>
+          <label><span>Vehiculo</span><select v-model="form.vehicle_id" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-3"><option value="">Seleccionar</option><option v-for="v in vehicles" :key="v.id" :value="v.id" :disabled="v.is_occupied">{{ v.plate }} - {{ availabilityLabel(v) }} - {{ v.driver?.name ?? 'sin conductor' }}</option></select></label>
           <label><span>Prioridad</span><select v-model="form.priority" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-3"><option value="baja">Baja</option><option value="normal">Normal</option><option value="alta">Alta</option><option value="critica">Critica</option></select></label>
         </div>
         <div v-if="vehicle && !selectedIsOccupied" class="rounded-md bg-[#e6eef7] p-4 text-sm text-[#123f6e]">Conductor: {{ vehicle.driver?.name ?? 'Sin asignar' }} | Distancia: {{ formatDistance(vehicle.distance_meters) }} | Herramientas disponibles: {{ availableItems.length }}</div>
-        <div v-if="vehicle && selectedIsOccupied" class="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-800">Este vehiculo no esta disponible porque tiene la solicitud #{{ vehicle.active_tool_request?.id }} en estado {{ vehicle.active_tool_request?.status }}.</div>
+        <div v-if="vehicle && selectedIsOccupied" class="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-800">Este vehiculo no esta disponible {{ selectedIsReserved ? `porque esta reservado por administracion. Motivo: ${vehicle.active_reservation?.reason ?? '-'}` : `porque tiene la solicitud #${vehicle.active_tool_request?.id} en estado ${vehicle.active_tool_request?.status}` }}.</div>
         <label class="block"><span>Direccion/Referencia del tecnico</span><textarea v-model="form.technician_address" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-3"></textarea></label>
         <label class="block"><span>Observaciones</span><textarea v-model="form.observation" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-3"></textarea></label>
         <section><div class="mb-3 flex items-center justify-between"><h2 class="font-semibold text-[#123f6e]">Herramientas solicitadas</h2><button type="button" :disabled="selectedIsOccupied || hasActiveTechnicianRequest" @click="addItem" class="inline-flex items-center gap-2 rounded-md border border-[#123f6e] px-3 py-2 font-semibold text-[#123f6e] transition-colors" :class="selectedIsOccupied || hasActiveTechnicianRequest ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-[#edf3fa]'"><Plus class="h-4 w-4" /> Agregar</button></div><div class="space-y-3"><div v-for="(item, index) in form.items" :key="index" class="grid gap-3 rounded-md border border-slate-200 p-3 md:grid-cols-[1fr_140px_auto]"><select v-model="item.inventory_item_id" class="rounded-md border border-slate-300 px-3 py-3"><option v-for="row in availableItems" :key="row.id" :value="row.inventory_item_id">{{ row.item?.name }} (disp. {{ row.quantity_available }})</option></select><input v-model="item.quantity" type="number" min="1" :max="maxFor(item.inventory_item_id)" class="rounded-md border border-slate-300 px-3 py-3" /><button type="button" @click="form.items.splice(index, 1)" class="cursor-pointer rounded-md border border-red-200 p-3 text-red-700 transition-colors hover:bg-red-50"><Trash2 class="h-5 w-5" /></button></div><p v-if="!form.items.length" class="rounded-md bg-slate-50 p-4 text-sm text-slate-500">Agrega al menos una herramienta.</p></div></section>

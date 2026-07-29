@@ -61,15 +61,16 @@ class ToolRequestWebController extends Controller
             ->whereHas('item', fn ($item) => $item->where('status', 'active'))
             ->with('item.category');
 
-        $vehicles = Vehicle::with(['driver', 'inventory' => $activeInventory, 'activeToolRequest.technician'])
+        $vehicles = Vehicle::with(['driver', 'project', 'inventory' => $activeInventory, 'activeToolRequest.technician', 'activeReservation.reservedBy'])
             ->where('status', 'active')
             ->get()
             ->map(function (Vehicle $vehicle) use ($userLocation) {
                 $vehicle->setAttribute('distance_meters', $this->distanceFromUser($userLocation, $vehicle));
                 $vehicle->setAttribute('available_items_count', $vehicle->inventory->filter(fn ($row) => (int) $row->quantity_available > 0)->count());
                 $vehicle->setAttribute('has_available_inventory', $vehicle->available_items_count > 0);
-                $vehicle->setAttribute('is_occupied', (bool) $vehicle->activeToolRequest);
-                $vehicle->setAttribute('availability_status', $vehicle->activeToolRequest ? 'ocupado' : 'disponible');
+                $vehicle->setAttribute('is_reserved', (bool) $vehicle->activeReservation);
+                $vehicle->setAttribute('is_occupied', (bool) $vehicle->activeToolRequest || (bool) $vehicle->activeReservation);
+                $vehicle->setAttribute('availability_status', $vehicle->activeReservation ? 'reservado' : ($vehicle->activeToolRequest ? 'ocupado' : 'disponible'));
                 return $vehicle;
             })
             ->when($user->hasRole('Tecnico'), fn ($vehicles) => $vehicles

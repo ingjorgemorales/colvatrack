@@ -2,6 +2,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\GpsProvider;
+use App\Models\Project;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\Vehicle;
@@ -16,7 +17,7 @@ class VehicleController extends Controller
     public function index(Request $request)
     {
         $perPage = min((int) $request->integer('per_page', 10), 100);
-        $query = Vehicle::with(['driver', 'provider'])->latest();
+        $query = Vehicle::with(['driver', 'provider', 'project', 'activeReservation.reservedBy'])->latest();
         if ($request->filled('search')) {
             $search = $request->string('search');
             $query->where(fn($q) => $q->where('plate', 'like', "%$search%")
@@ -112,13 +113,17 @@ class VehicleController extends Controller
             ->pluck('driver_id');
 
         return [
-            'vehicle' => $vehicle?->load('driver', 'provider'),
+            'vehicle' => $vehicle?->load('driver', 'provider', 'project'),
             'drivers' => User::when($driverRole, fn($q) => $q->where('role_id', $driverRole->id))
                 ->where('status', 'active')
                 ->whereNotIn('id', $assignedDriverIds)
                 ->orderBy('name')
                 ->get(),
             'providers' => GpsProvider::orderBy('name')->get(),
+            'projects' => Project::where('status', 'active')
+                ->when($vehicle?->project_id, fn ($q) => $q->orWhereKey($vehicle->project_id))
+                ->orderBy('name')
+                ->get(),
         ];
     }
 
@@ -133,6 +138,7 @@ class VehicleController extends Controller
             'color' => ['nullable', 'string', 'max:60'],
             'status' => ['required', 'in:active,inactive,maintenance'],
             'gps_provider_id' => ['nullable', 'exists:gps_providers,id'],
+            'project_id' => ['nullable', 'exists:projects,id'],
             'external_gps_id' => ['nullable', 'string', 'max:80'],
             'driver_id' => [
                 'nullable',

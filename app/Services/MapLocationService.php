@@ -16,10 +16,12 @@ class MapLocationService
 
         $vehicles = Vehicle::with([
                 'driver',
+                'project',
                 'inventory' => fn ($q) => $q
                     ->whereHas('item', fn ($item) => $item->where('status', 'active'))
                     ->with('item'),
                 'activeToolRequest.technician',
+                'activeReservation.reservedBy',
             ])
             ->where('status', 'active')
             ->whereNotNull('current_latitude')
@@ -27,8 +29,9 @@ class MapLocationService
             ->when($user?->hasRole('Conductor'), fn ($q) => $q->where('driver_id', $user->id))
             ->get()
             ->map(function (Vehicle $vehicle) {
-                $vehicle->setAttribute('is_occupied', (bool) $vehicle->activeToolRequest);
-                $vehicle->setAttribute('availability_status', $vehicle->activeToolRequest ? 'ocupado' : 'disponible');
+                $vehicle->setAttribute('is_reserved', (bool) $vehicle->activeReservation);
+                $vehicle->setAttribute('is_occupied', (bool) $vehicle->activeToolRequest || (bool) $vehicle->activeReservation);
+                $vehicle->setAttribute('availability_status', $vehicle->activeReservation ? 'reservado' : ($vehicle->activeToolRequest ? 'ocupado' : 'disponible'));
                 return $vehicle;
             });
 
