@@ -68,7 +68,7 @@ class VehicleController extends Controller
 
     public function update(Request $request, Vehicle $vehiculo)
     {
-        $vehiculo->update($this->validated($request, $vehiculo));
+        $vehiculo->update($this->validatedForUpdate($request, $vehiculo));
         return redirect()->route('vehiculos.index')->with('success', 'Vehiculo actualizado.');
     }
 
@@ -169,6 +169,44 @@ class VehicleController extends Controller
         if (! empty($data['driver_id'])) {
             $assignedVehicle = Vehicle::where('driver_id', $data['driver_id'])
                 ->when($vehicle, fn ($q) => $q->whereKeyNot($vehicle->id))
+                ->first();
+
+            if ($assignedVehicle) {
+                throw ValidationException::withMessages([
+                    'driver_id' => 'Este conductor ya esta asignado al vehiculo '.$assignedVehicle->plate.'.',
+                ]);
+            }
+        }
+
+        if ($data['status'] === 'inactive') {
+            $data['driver_id'] = null;
+        }
+
+        return $data;
+    }
+
+    private function validatedForUpdate(Request $request, Vehicle $vehicle): array
+    {
+        $driverRoleId = Role::where('name', 'Conductor')->value('id');
+        $data = $request->validate([
+            'brand' => ['nullable', 'string', 'max:80'],
+            'model' => ['nullable', 'string', 'max:80'],
+            'year' => ['nullable', 'integer', 'min:1980', 'max:'.((int) date('Y') + 1)],
+            'color' => ['nullable', 'string', 'max:60'],
+            'status' => ['required', 'in:active,inactive,maintenance'],
+            'gps_provider_id' => ['nullable', 'exists:gps_providers,id'],
+            'project_id' => ['nullable', 'exists:projects,id'],
+            'driver_id' => [
+                'nullable',
+                Rule::exists('users', 'id')->where(fn ($q) => $q
+                    ->when($driverRoleId, fn ($query) => $query->where('role_id', $driverRoleId))
+                    ->where('status', 'active')),
+            ],
+        ]);
+
+        if (! empty($data['driver_id'])) {
+            $assignedVehicle = Vehicle::where('driver_id', $data['driver_id'])
+                ->whereKeyNot($vehicle->id)
                 ->first();
 
             if ($assignedVehicle) {
