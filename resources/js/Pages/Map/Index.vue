@@ -27,6 +27,7 @@ let markers = [];
 let radiusCircles = [];
 let pollTimer;
 let freshnessTimer;
+let mapResizeObserver;
 const technicianLocationChannelName = 'users.location';
 let fittedOnce = false;
 
@@ -311,6 +312,11 @@ function receiveTechnicianLocation(event) {
 onMounted(() => {
   map = L.map(mapEl.value, { zoomControl: true }).setView([4.65, -74.09], 12);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: 'Leaflet | OpenStreetMap' }).addTo(map);
+  if ('ResizeObserver' in window) {
+    mapResizeObserver = new ResizeObserver(() => map?.invalidateSize());
+    mapResizeObserver.observe(mapEl.value);
+  }
+  window.setTimeout(() => map?.invalidateSize(), 150);
   lastRefresh.value = new Date();
   renderMarkers({ fit: true });
   if (window.Echo) {
@@ -329,6 +335,7 @@ onBeforeUnmount(() => {
   if (freshnessTimer) window.clearInterval(freshnessTimer);
   if (window.Echo) window.Echo.leave(technicianLocationChannelName);
   window.removeEventListener('colvatrack:user-location-updated', receiveTechnicianLocation);
+  if (mapResizeObserver) mapResizeObserver.disconnect();
   clearLayers();
 });
 
@@ -361,6 +368,6 @@ watch([query, status, availability, selectedTechnicianId, distance], () => rende
       <Link v-if="can('vehiculos')" href="/vehiculos" class="rounded bg-white px-3 py-2 font-semibold text-[#123f6e] shadow-sm">Gestionar vehiculos</Link>
     </section>
 
-    <section class="rounded-md border border-slate-200 bg-white p-4 shadow-sm"><div ref="mapEl" class="h-[58vh] min-h-[300px] sm:min-h-[520px]"></div></section>
+    <section class="rounded-md border border-slate-200 bg-white p-3 shadow-sm sm:p-4"><div ref="mapEl" class="h-[calc(100vh-20rem)] min-h-[360px] w-full sm:h-[calc(100vh-18rem)] sm:min-h-[560px] xl:h-[calc(100vh-16rem)]"></div></section>
   </AppLayout>
 </template>
