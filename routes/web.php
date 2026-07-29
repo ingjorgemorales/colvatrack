@@ -86,6 +86,7 @@ Route::middleware(['auth', 'must.change.password', 'audit'])->group(function () 
     Route::post('/vehiculos/proyectos', [ProjectController::class, 'store'])->name('proyectos.store')->middleware('permission:vehiculos,crear');
     Route::get('/vehiculos/proyectos/{project}/edit', [ProjectController::class, 'edit'])->name('proyectos.edit')->middleware('permission:vehiculos,editar');
     Route::patch('/vehiculos/proyectos/{project}', [ProjectController::class, 'update'])->name('proyectos.update')->middleware('permission:vehiculos,editar');
+    Route::patch('/vehiculos/proyectos/{project}/estado', [ProjectController::class, 'toggleStatus'])->name('proyectos.status')->middleware('permission:vehiculos,editar');
     Route::delete('/vehiculos/proyectos/{project}', [ProjectController::class, 'destroy'])->name('proyectos.destroy')->middleware('permission:vehiculos,eliminar');
     Route::get('/vehiculos/create', [VehicleController::class, 'create'])->name('vehiculos.create')->middleware('permission:vehiculos,crear');
     Route::post('/vehiculos', [VehicleController::class, 'store'])->name('vehiculos.store')->middleware('permission:vehiculos,crear');

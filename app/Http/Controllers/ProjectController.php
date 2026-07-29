@@ -78,6 +78,13 @@ class ProjectController extends Controller
         return back()->with('success', 'Proyecto inactivado.');
     }
 
+    public function toggleStatus(Project $project)
+    {
+        $project->update(['status' => $project->status === 'active' ? 'inactive' : 'active']);
+
+        return back()->with('success', $project->status === 'active' ? 'Proyecto activado.' : 'Proyecto inactivado.');
+    }
+
     private function validated(Request $request, ?Project $project = null): array
     {
         return $request->validate([
