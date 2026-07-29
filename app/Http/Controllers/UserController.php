@@ -36,10 +36,13 @@ class UserController extends Controller
         if ($request->filled('status')) {
             $users->where('status', $request->string('status'));
         }
+        if ($request->filled('role_id')) {
+            $users->where('role_id', $request->integer('role_id'));
+        }
         return Inertia::render('Users/Index', [
             'users' => $users->latest()->paginate($perPage)->withQueryString(),
             'roles' => $this->availableRoles($actor),
-            'filters' => $request->only('search', 'status', 'per_page'),
+            'filters' => $request->only('search', 'status', 'role_id', 'per_page'),
         ]);
     }
 
@@ -101,6 +104,22 @@ class UserController extends Controller
         $usuario->update(['status' => 'inactive']);
         $this->releaseDriverVehicle($usuario);
         return back()->with('success', 'Usuario desactivado.');
+    }
+
+    public function toggleStatus(User $usuario)
+    {
+        $this->authorizeManageUser(auth()->user(), $usuario);
+
+        if ($usuario->status === 'active') {
+            $usuario->update(['status' => 'inactive']);
+            $this->releaseDriverVehicle($usuario);
+
+            return back()->with('success', 'Usuario desactivado.');
+        }
+
+        $usuario->update(['status' => 'active']);
+
+        return back()->with('success', 'Usuario activado.');
     }
 
     private function availableVehicles(?User $user = null)

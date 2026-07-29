@@ -100,6 +100,7 @@ class AuditImportantAction
             'solicitudes.chat.store' => $user.' envio un mensaje en la solicitud #'.$this->modelKey($request, 'solicitude').'.',
             'usuarios.store' => $user.' creo el usuario '.$this->payloadPerson($request).'.',
             'usuarios.update' => $user.' actualizo el usuario '.$this->modelPerson($request, 'usuario').'.',
+            'usuarios.status' => $user.' cambio el estado del usuario '.$this->modelPerson($request, 'usuario').'.',
             'usuarios.destroy' => $user.' desactivo el usuario '.$this->modelPerson($request, 'usuario').'.',
             'vehiculos.store' => $user.' creo el vehiculo '.$request->input('plate', 'sin placa').'.',
             'vehiculos.update' => $user.' actualizo el vehiculo '.$this->modelName($request, 'vehiculo', 'plate').'.',

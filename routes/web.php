@@ -70,6 +70,7 @@ Route::middleware(['auth', 'must.change.password', 'audit'])->group(function () 
     Route::get('/usuarios/{usuario}/edit', [UserController::class, 'edit'])->name('usuarios.edit')->middleware('permission:usuarios,editar');
     Route::patch('/usuarios/{usuario}', [UserController::class, 'update'])->name('usuarios.update')->middleware('permission:usuarios,editar');
     Route::put('/usuarios/{usuario}', [UserController::class, 'update'])->name('usuarios.update')->middleware('permission:usuarios,editar');
+    Route::patch('/usuarios/{usuario}/estado', [UserController::class, 'toggleStatus'])->name('usuarios.status')->middleware('permission:usuarios,editar');
     Route::delete('/usuarios/{usuario}', [UserController::class, 'destroy'])->name('usuarios.destroy')->middleware('permission:usuarios,eliminar');
 
     Route::get('/roles', [RoleController::class, 'index'])->name('roles.index')->middleware('permission:roles,ver');
