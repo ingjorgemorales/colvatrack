@@ -61,6 +61,8 @@ class DashboardController extends Controller
             $recentRequests = ToolRequest::with(['vehicle','technician','driver','activeDelays'])->latest()->limit(8)->get();
         }
 
+        $stats = $this->visibleStats($stats, $user);
+
         return Inertia::render('Dashboard/Index', [
             'stats' => $stats,
             'recentRequests' => $recentRequests,
@@ -86,6 +88,34 @@ class DashboardController extends Controller
                 (float) $vehicle->current_longitude
             ) <= self::TECHNICIAN_NEARBY_RADIUS_METERS)
             ->count();
+    }
+
+    private function visibleStats(array $stats, User $user): array
+    {
+        return array_values(array_filter($stats, function (array $stat) use ($user) {
+            $permission = $this->permissionForRoute($stat['route'] ?? null);
+
+            return ! $permission || $user->canAccess($permission[0], $permission[1]);
+        }));
+    }
+
+    private function permissionForRoute(?string $route): ?array
+    {
+        if (! $route) {
+            return null;
+        }
+
+        return match (true) {
+            str_starts_with($route, '/vehiculos/proyectos') => ['proyectos', 'ver'],
+            str_starts_with($route, '/vehiculos') => ['vehiculos', 'ver'],
+            str_starts_with($route, '/usuarios') => ['usuarios', 'ver'],
+            str_starts_with($route, '/solicitudes') => ['solicitudes', 'ver'],
+            str_starts_with($route, '/inventario') => ['inventario', 'ver'],
+            str_starts_with($route, '/notificaciones') => ['notificaciones', 'ver'],
+            str_starts_with($route, '/reportes') => ['reportes', 'ver'],
+            str_starts_with($route, '/mapa') => ['mapa', 'ver'],
+            default => null,
+        };
     }
 
     private function distanceMeters(float $lat1, float $lng1, float $lat2, float $lng2): int

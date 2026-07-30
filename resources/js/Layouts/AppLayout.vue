@@ -1,7 +1,7 @@
 ﻿<script setup>
 import { Link, router, usePage } from '@inertiajs/vue3';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { BarChart3, Bell, Boxes, Car, ClipboardList, LogOut, Map, Menu, Settings, ShieldCheck, UserCog, Users, X } from '@lucide/vue';
+import { BarChart3, Bell, Boxes, Car, ClipboardList, FolderKanban, LogOut, Map, Menu, Settings, ShieldCheck, UserCog, Users, X } from '@lucide/vue';
 import LocationGate from '@/Components/LocationGate.vue';
 import axios from 'axios';
 
@@ -27,7 +27,7 @@ const can = (module, action = 'ver') => permissions.value.includes('*') || permi
 const nav = computed(() => [
     ['Dashboard', '/dashboard', BarChart3, can('dashboard')], ['Mapa', '/mapa', Map, can('mapa')], ['Solicitudes', '/solicitudes', ClipboardList, can('solicitudes')],
   ['Notificaciones', '/notificaciones', Bell, can('notificaciones')], ['Inventario', '/inventario', Boxes, can('inventario')],
-  ['Vehiculos', '/vehiculos', Car, can('vehiculos')], ['Reportes', '/reportes', BarChart3, can('reportes')], ['Usuarios', '/usuarios', Users, can('usuarios')],
+  ['Vehiculos', '/vehiculos', Car, can('vehiculos')], ['Proyectos', '/vehiculos/proyectos', FolderKanban, can('proyectos')], ['Reportes', '/reportes', BarChart3, can('reportes')], ['Usuarios', '/usuarios', Users, can('usuarios')],
   ['Roles', '/roles', ShieldCheck, can('roles')], ['Auditoria', '/auditoria', UserCog, can('auditoria')], ['Perfil', '/perfil', UserCog, can('perfil')],
   ['Configuracion GPS', '/configuracion/gps', Settings, can('configuracion_gps')],
 ].filter(item => item[3]));

@@ -52,11 +52,53 @@ class RoleController extends Controller
 
     private function permissions()
     {
-        return Permission::orderBy('module')->orderBy('action')->get()->groupBy('module');
+        $catalog = $this->permissionCatalog();
+
+        foreach ($catalog as $module => $actions) {
+            foreach ($actions as $action) {
+                Permission::firstOrCreate(
+                    ['module' => $module, 'action' => $action],
+                    ['name' => $module.'.'.$action]
+                );
+            }
+        }
+
+        $permissions = Permission::whereIn('module', array_keys($catalog))
+            ->get()
+            ->keyBy(fn (Permission $permission) => $permission->module.'.'.$permission->action);
+
+        return collect($catalog)
+            ->mapWithKeys(fn (array $actions, string $module) => [
+                $module => collect($actions)
+                    ->map(fn (string $action) => $permissions->get($module.'.'.$action))
+                    ->filter()
+                    ->values(),
+            ]);
     }
 
     private function authorizeBaseRoleManagement(Role $role): void
     {
         abort_if(! auth()->user()?->hasRole('Superadministrador') && in_array($role->name, ['Superadministrador','Administrador','Tecnico','Conductor'], true), 403);
+    }
+
+    private function permissionCatalog(): array
+    {
+        return [
+            'dashboard' => ['ver'],
+            'mapa' => ['ver'],
+            'solicitudes' => ['ver', 'crear', 'editar'],
+            'chat' => ['ver', 'crear', 'editar'],
+            'notificaciones' => ['ver', 'editar', 'gestionar'],
+            'inventario' => ['ver', 'crear', 'editar', 'gestionar'],
+            'vehiculos' => ['ver', 'crear', 'editar', 'estado', 'recorrido'],
+            'proyectos' => ['ver', 'crear', 'editar', 'estado', 'eliminar'],
+            'reservas_vehiculos' => ['ver', 'crear', 'editar', 'gestionar'],
+            'reportes' => ['ver', 'exportar'],
+            'usuarios' => ['ver', 'crear', 'editar', 'eliminar'],
+            'roles' => ['ver', 'crear', 'editar', 'eliminar'],
+            'auditoria' => ['ver'],
+            'perfil' => ['ver', 'editar'],
+            'configuracion_gps' => ['ver', 'crear', 'editar', 'eliminar', 'gestionar'],
+        ];
     }
 }

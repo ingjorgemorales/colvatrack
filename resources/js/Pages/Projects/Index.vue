@@ -1,13 +1,19 @@
 <script setup>
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { ArrowLeft, Pencil, Plus, Power, PowerOff, Search, X } from '@lucide/vue';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 
 const props = defineProps({ projects: Object, filters: Object });
+const page = usePage();
+const perms = page.props.auth?.permissions ?? [];
+const can = (module, action = 'ver') => perms.includes('*') || perms.includes(`${module}.${action}`);
 const search = ref(props.filters?.search ?? '');
 const status = ref(props.filters?.status ?? '');
 const perPage = ref(props.filters?.per_page ?? 10);
+const canCreateProjects = computed(() => can('proyectos', 'crear'));
+const canEditProjects = computed(() => can('proyectos', 'editar'));
+const canChangeProjectStatus = computed(() => can('proyectos', 'estado'));
 const apply = () => router.get('/vehiculos/proyectos', { search: search.value, status: status.value, per_page: perPage.value }, { preserveState: true, replace: true });
 const clearFilters = () => { search.value = ''; status.value = ''; perPage.value = 10; router.get('/vehiculos/proyectos', {}, { preserveState: true, replace: true }); };
 const toggleStatus = (project) => {
@@ -24,7 +30,7 @@ const toggleStatus = (project) => {
     <section class="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
       <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
         <Link href="/vehiculos" class="inline-flex items-center gap-2 text-sm font-semibold text-[#123f6e]"><ArrowLeft class="h-4 w-4" /> Volver a vehiculos</Link>
-        <Link href="/vehiculos/proyectos/create" class="inline-flex items-center gap-2 rounded-md bg-[#123f6e] px-4 py-3 font-semibold text-white transition-colors hover:bg-[#0e2d52]"><Plus class="h-5 w-5" /> Nuevo proyecto</Link>
+        <Link v-if="canCreateProjects" href="/vehiculos/proyectos/create" class="inline-flex items-center gap-2 rounded-md bg-[#123f6e] px-4 py-3 font-semibold text-white transition-colors hover:bg-[#0e2d52]"><Plus class="h-5 w-5" /> Nuevo proyecto</Link>
       </div>
 
       <div class="mb-5 grid gap-2 sm:grid-cols-[1fr_170px_140px_auto_auto]">
@@ -49,7 +55,7 @@ const toggleStatus = (project) => {
               <td>{{ project.description ?? '-' }}</td>
               <td>{{ project.vehicles_count }}</td>
               <td><span class="rounded px-2 py-1" :class="project.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'">{{ project.status }}</span></td>
-              <td class="text-right"><Link :href="`/vehiculos/proyectos/${project.id}/edit`" class="mr-2 inline-flex rounded-md border border-slate-200 p-2 text-[#123f6e]"><Pencil class="h-4 w-4" /></Link><button @click="toggleStatus(project)" class="inline-flex cursor-pointer rounded-md border p-2 transition-colors" :class="project.status === 'active' ? 'border-orange-200 text-orange-700 hover:bg-orange-50' : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'" :title="project.status === 'active' ? 'Inactivar proyecto' : 'Activar proyecto'"><PowerOff v-if="project.status === 'active'" class="h-4 w-4" /><Power v-else class="h-4 w-4" /></button></td>
+              <td class="text-right"><Link v-if="canEditProjects" :href="`/vehiculos/proyectos/${project.id}/edit`" class="mr-2 inline-flex rounded-md border border-slate-200 p-2 text-[#123f6e]"><Pencil class="h-4 w-4" /></Link><button v-if="canChangeProjectStatus" @click="toggleStatus(project)" class="inline-flex cursor-pointer rounded-md border p-2 transition-colors" :class="project.status === 'active' ? 'border-orange-200 text-orange-700 hover:bg-orange-50' : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'" :title="project.status === 'active' ? 'Inactivar proyecto' : 'Activar proyecto'"><PowerOff v-if="project.status === 'active'" class="h-4 w-4" /><Power v-else class="h-4 w-4" /></button><span v-if="!canEditProjects && !canChangeProjectStatus" class="text-slate-400">-</span></td>
             </tr>
             <tr v-if="!projects.data.length"><td colspan="5" class="px-3 py-8 text-center text-slate-500">Sin proyectos.</td></tr>
           </tbody>
@@ -61,7 +67,7 @@ const toggleStatus = (project) => {
           <div class="mb-2 flex items-start justify-between gap-2"><div class="font-semibold text-slate-950">{{ project.name }}</div><span class="shrink-0 rounded px-2 py-1 text-xs" :class="project.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'">{{ project.status }}</span></div>
           <div class="text-xs text-slate-600">{{ project.description ?? 'Sin descripcion' }}</div>
           <div class="mt-1 text-xs text-slate-600"><span class="font-medium text-slate-700">Vehiculos:</span> {{ project.vehicles_count }}</div>
-          <div class="mt-2 flex gap-2"><Link :href="`/vehiculos/proyectos/${project.id}/edit`" class="inline-flex rounded-md border border-slate-200 p-2 text-[#123f6e]"><Pencil class="h-4 w-4" /></Link><button @click="toggleStatus(project)" class="inline-flex cursor-pointer rounded-md border p-2 transition-colors" :class="project.status === 'active' ? 'border-orange-200 text-orange-700 hover:bg-orange-50' : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'"><PowerOff v-if="project.status === 'active'" class="h-4 w-4" /><Power v-else class="h-4 w-4" /></button></div>
+          <div class="mt-2 flex gap-2"><Link v-if="canEditProjects" :href="`/vehiculos/proyectos/${project.id}/edit`" class="inline-flex rounded-md border border-slate-200 p-2 text-[#123f6e]"><Pencil class="h-4 w-4" /></Link><button v-if="canChangeProjectStatus" @click="toggleStatus(project)" class="inline-flex cursor-pointer rounded-md border p-2 transition-colors" :class="project.status === 'active' ? 'border-orange-200 text-orange-700 hover:bg-orange-50' : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'"><PowerOff v-if="project.status === 'active'" class="h-4 w-4" /><Power v-else class="h-4 w-4" /></button></div>
         </div>
         <p v-if="!projects.data.length" class="py-4 text-center text-sm text-slate-500">Sin proyectos.</p>
       </div>
