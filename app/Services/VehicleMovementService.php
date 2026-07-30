@@ -10,11 +10,12 @@ class VehicleMovementService
     public function decorate(Collection $vehicles): Collection
     {
         $ids = $vehicles->pluck('id')->filter()->values();
+        $freshAfter = now()->subSeconds(max(10, (int) config('colvatrack.gps.movement_max_age_seconds', 60)));
+        $minSpeed = max(0, (float) config('colvatrack.gps.movement_min_speed_kmh', 3));
         if ($ids->isEmpty()) {
             return $vehicles;
         }
 
-        $freshAfter = now()->subMinutes((int) env('GPS_MAX_AGE_MINUTES', 5));
         $threshold = (float) env('GPS_MOVEMENT_DISTANCE_THRESHOLD_METERS', 25);
         $latest = collect();
 
@@ -38,15 +39,22 @@ class VehicleMovementService
             $current = $points->get(0);
             $previous = $points->get(1);
             $distance = ($current && $previous) ? $this->distanceMeters($current, $previous) : 0.0;
-            $isMoving = $current && $previous && $distance >= $threshold;
+            $movementStatus = $vehicle->movementStatus($freshAfter, $minSpeed);
+            $isMoving = $movementStatus === 'moving';
 
             $vehicle->setAttribute('is_moving', $isMoving);
+            $vehicle->setAttribute('movement_status', $movementStatus);
+            $vehicle->setAttribute('movement_status_label', match ($movementStatus) {
+                'moving' => 'En movimiento',
+                'stopped' => 'Sin movimiento',
+                default => 'GPS sin actualizar',
+            });
             $vehicle->setAttribute('movement_distance_meters', round($distance, 1));
             $vehicle->setAttribute('movement_threshold_meters', $threshold);
             $vehicle->setAttribute('movement_basis', $current && $previous ? 'position_delta' : 'insufficient_history');
             $vehicle->setAttribute('previous_latitude', $previous?->latitude);
             $vehicle->setAttribute('previous_longitude', $previous?->longitude);
-            $vehicle->setAttribute('gps_is_fresh', $vehicle->last_gps_datetime && $vehicle->last_gps_datetime->greaterThan($freshAfter));
+            $vehicle->setAttribute('gps_is_fresh', $movementStatus !== 'stale');
 
             return $vehicle;
         });

@@ -33,6 +33,15 @@ button, input, select, textarea { font: inherit; }
     box-shadow: 0 0 0 8px rgba(21, 128, 61, 0.08);
     animation: veh-pulse 3s ease-in-out infinite;
 }
+.vehicle-marker.is-moving .vehicle-marker__halo {
+    background: rgba(21, 128, 61, 0.16);
+    box-shadow: 0 0 0 8px rgba(21, 128, 61, 0.08);
+    animation: veh-pulse 3s ease-in-out infinite;
+}
+.vehicle-marker.is-stopped .vehicle-marker__halo {
+    background: rgba(51, 65, 85, 0.14);
+    box-shadow: 0 0 0 8px rgba(51, 65, 85, 0.07);
+}
 .vehicle-marker.is-stale .vehicle-marker__halo {
     background: rgba(100, 116, 139, 0.12);
     box-shadow: 0 0 0 8px rgba(100, 116, 139, 0.06);
@@ -55,8 +64,9 @@ button, input, select, textarea { font: inherit; }
     box-shadow: 0 8px 18px rgba(15, 23, 42, 0.28);
 }
 .vehicle-marker.is-fresh .vehicle-marker__car { background: #15803d; }
+.vehicle-marker.is-moving .vehicle-marker__car { background: #15803d; }
+.vehicle-marker.is-stopped .vehicle-marker__car { background: #334155; }
 .vehicle-marker.is-stale .vehicle-marker__car { background: #64748b; }
-.vehicle-marker.is-occupied .vehicle-marker__car { background: #b45309; }
 .vehicle-marker__car svg {
     width: 35px;
     height: 35px;
