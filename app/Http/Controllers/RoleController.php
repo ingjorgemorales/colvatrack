@@ -11,19 +11,22 @@ class RoleController extends Controller
 {
     public function index()
     {
-        return Inertia::render('Roles/Index', ['roles' => Role::withCount('users')->with('permissions')->orderBy('name')->get()]);
+        return Inertia::render('Roles/Index', ['roles' => Role::withCount('users')->with('permissions', 'manageableRoles')->orderBy('name')->get()]);
     }
 
     public function create()
     {
-        return Inertia::render('Roles/Form', ['role' => null, 'permissions' => $this->permissions()]);
+        return Inertia::render('Roles/Form', ['role' => null, 'permissions' => $this->permissions(), 'manageableRoles' => $this->manageableRoleOptions()]);
     }
 
     public function store(Request $request)
     {
-        $data = $request->validate(['name' => ['required','string','max:120','unique:roles,name'], 'description' => ['nullable','string'], 'permissions' => ['array'], 'permissions.*' => ['exists:permissions,id']]);
-        $permissions = $data['permissions'] ?? []; unset($data['permissions']);
+        $data = $request->validate(['name' => ['required','string','max:120','unique:roles,name'], 'description' => ['nullable','string'], 'permissions' => ['array'], 'permissions.*' => ['exists:permissions,id'], 'manageable_roles' => ['array'], 'manageable_roles.*' => ['exists:roles,id']]);
+        $permissions = $data['permissions'] ?? [];
+        $manageableRoles = $data['manageable_roles'] ?? [];
+        unset($data['permissions'], $data['manageable_roles']);
         $role = Role::create($data); $role->permissions()->sync($permissions);
+        $this->syncManageableRoles($role, $manageableRoles);
         return redirect()->route('roles.index')->with('success', 'Rol creado.');
     }
 
@@ -31,16 +34,19 @@ class RoleController extends Controller
     {
         $this->authorizeBaseRoleManagement($role);
 
-        return Inertia::render('Roles/Form', ['role' => $role->load('permissions'), 'permissions' => $this->permissions()]);
+        return Inertia::render('Roles/Form', ['role' => $role->load('permissions', 'manageableRoles'), 'permissions' => $this->permissions(), 'manageableRoles' => $this->manageableRoleOptions()]);
     }
 
     public function update(Request $request, Role $role)
     {
         $this->authorizeBaseRoleManagement($role);
 
-        $data = $request->validate(['name' => ['required','string','max:120', Rule::unique('roles','name')->ignore($role->id)], 'description' => ['nullable','string'], 'permissions' => ['array'], 'permissions.*' => ['exists:permissions,id']]);
-        $permissions = $data['permissions'] ?? []; unset($data['permissions']);
+        $data = $request->validate(['name' => ['required','string','max:120', Rule::unique('roles','name')->ignore($role->id)], 'description' => ['nullable','string'], 'permissions' => ['array'], 'permissions.*' => ['exists:permissions,id'], 'manageable_roles' => ['array'], 'manageable_roles.*' => ['exists:roles,id']]);
+        $permissions = $data['permissions'] ?? [];
+        $manageableRoles = $data['manageable_roles'] ?? [];
+        unset($data['permissions'], $data['manageable_roles']);
         $role->update($data); $role->permissions()->sync($permissions);
+        $this->syncManageableRoles($role, $manageableRoles);
         return redirect()->route('roles.index')->with('success', 'Rol actualizado.');
     }
 
@@ -79,6 +85,36 @@ class RoleController extends Controller
     private function authorizeBaseRoleManagement(Role $role): void
     {
         abort_if(! auth()->user()?->hasRole('Superadministrador') && in_array($role->name, ['Superadministrador','Administrador','Tecnico','Conductor'], true), 403);
+    }
+
+    private function manageableRoleOptions()
+    {
+        return Role::query()
+            ->where('name', '!=', 'Superadministrador')
+            ->orderBy('name')
+            ->get(['id', 'name', 'description']);
+    }
+
+    private function syncManageableRoles(Role $role, array $roleIds): void
+    {
+        $superadminId = Role::where('name', 'Superadministrador')->value('id');
+
+        if ($role->name === 'Superadministrador') {
+            $role->manageableRoles()->sync(
+                Role::where('name', '!=', 'Superadministrador')->pluck('id')->all()
+            );
+
+            return;
+        }
+
+        $ids = collect($roleIds)
+            ->map(fn ($id) => (int) $id)
+            ->reject(fn ($id) => $id === (int) $role->id || $id === (int) $superadminId)
+            ->unique()
+            ->values()
+            ->all();
+
+        $role->manageableRoles()->sync($ids);
     }
 
     private function permissionCatalog(): array

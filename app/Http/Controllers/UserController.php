@@ -21,9 +21,7 @@ class UserController extends Controller
         $actor = $request->user();
         $perPage = min((int) $request->integer('per_page', 10), 100);
         $users = User::with('role', 'assignedVehicle');
-        if (! $actor->hasRole('Superadministrador')) {
-            $users->whereDoesntHave('role', fn ($q) => $q->where('name', 'Superadministrador'));
-        }
+        $this->scopeManageableUsers($users, $actor);
         if ($request->filled('search')) {
             $search = $request->string('search');
             $users->where(function ($q) use ($search) {
@@ -170,8 +168,12 @@ class UserController extends Controller
 
     private function availableRoles(User $actor)
     {
+        if ($actor->hasRole('Superadministrador')) {
+            return Role::query()->orderBy('name')->get();
+        }
+
         return Role::query()
-            ->when(! $actor->hasRole('Superadministrador'), fn ($q) => $q->where('name', '!=', 'Superadministrador'))
+            ->whereIn('id', $this->manageableRoleIds($actor))
             ->orderBy('name')
             ->get();
     }
@@ -181,7 +183,8 @@ class UserController extends Controller
         $rule = Rule::exists('roles', 'id');
 
         if (! $actor->hasRole('Superadministrador')) {
-            $rule->where(fn ($q) => $q->where('name', '!=', 'Superadministrador'));
+            $manageableRoleIds = $this->manageableRoleIds($actor);
+            $rule->where(fn ($q) => $q->whereIn('id', $manageableRoleIds));
         }
 
         return $rule;
@@ -189,6 +192,27 @@ class UserController extends Controller
 
     private function authorizeManageUser(User $actor, User $target): void
     {
-        abort_if(! $actor->hasRole('Superadministrador') && $target->role?->name === 'Superadministrador', 403);
+        abort_if(! $actor->hasRole('Superadministrador') && ! in_array((int) $target->role_id, $this->manageableRoleIds($actor), true), 403);
+    }
+
+    private function scopeManageableUsers($query, User $actor): void
+    {
+        if ($actor->hasRole('Superadministrador')) {
+            return;
+        }
+
+        $manageableRoleIds = $this->manageableRoleIds($actor);
+
+        if (empty($manageableRoleIds)) {
+            $query->whereRaw('1 = 0');
+            return;
+        }
+
+        $query->whereIn('role_id', $manageableRoleIds);
+    }
+
+    private function manageableRoleIds(User $actor): array
+    {
+        return $actor->role?->manageableRoles()->pluck('roles.id')->map(fn ($id) => (int) $id)->all() ?? [];
     }
 }
