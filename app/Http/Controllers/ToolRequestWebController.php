@@ -99,6 +99,17 @@ class ToolRequestWebController extends Controller
             'items' => ['required', 'array', 'min:1'],
             'items.*.inventory_item_id' => ['required', Rule::exists('inventory_items', 'id')->where('status', 'active')],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
+        ], [
+            'vehicle_id.required' => 'Selecciona el vehiculo al que le vas a solicitar herramientas.',
+            'vehicle_id.exists' => 'El vehiculo seleccionado no existe o ya no esta disponible.',
+            'items.required' => 'Agrega al menos una herramienta a la solicitud.',
+            'items.array' => 'Agrega al menos una herramienta a la solicitud.',
+            'items.min' => 'Agrega al menos una herramienta a la solicitud.',
+            'items.*.inventory_item_id.required' => 'Selecciona la herramienta que vas a solicitar.',
+            'items.*.inventory_item_id.exists' => 'La herramienta seleccionada no existe o esta inactiva.',
+            'items.*.quantity.required' => 'Indica la cantidad de cada herramienta.',
+            'items.*.quantity.integer' => 'La cantidad debe ser un numero entero.',
+            'items.*.quantity.min' => 'La cantidad debe ser minimo 1.',
         ]);
         $vehicle = Vehicle::findOrFail($data['vehicle_id']);
         $data['driver_id'] = $vehicle->driver_id;

@@ -182,12 +182,23 @@ function actionDisabledMessage(status) {
   if (props.deliveryDistanceMeters === null || props.deliveryDistanceMeters === undefined) return 'No se puede habilitar la entrega porque falta ubicacion GPS del vehiculo o del tecnico.';
   return `El vehiculo debe estar a menos de ${props.deliveryRadiusMeters} metros del tecnico para registrar la entrega. Distancia actual: ${deliveryDistanceText.value}.`;
 }
+function parseServerDateTime(value) {
+  if (!value) return null;
+  if (value instanceof Date) return value;
+
+  const text = String(value).trim();
+  const hasTimezone = /(?:z|[+-]\d{2}:?\d{2})$/i.test(text);
+  const normalized = text.replace(' ', 'T');
+  const date = new Date(hasTimezone ? normalized : `${normalized}Z`);
+
+  return Number.isNaN(date.getTime()) ? null : date;
+}
 function formatBogotaDateTime(value) {
   if (!value) return '';
 
-  const date = new Date(value);
+  const date = parseServerDateTime(value);
 
-  if (Number.isNaN(date.getTime())) return value;
+  if (!date) return value;
 
   return bogotaDateTimeFormatter.format(date);
 }
@@ -212,8 +223,8 @@ function mergeMessages(incoming = []) {
   if (!freshMessages.length) return false;
 
   messages.value = [...messages.value, ...freshMessages].sort((a, b) => {
-    const first = new Date(a.created_at ?? 0).getTime();
-    const second = new Date(b.created_at ?? 0).getTime();
+    const first = parseServerDateTime(a.created_at)?.getTime() ?? 0;
+    const second = parseServerDateTime(b.created_at)?.getTime() ?? 0;
     return first - second;
   });
   scrollChat();

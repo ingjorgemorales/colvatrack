@@ -6,6 +6,10 @@ import { computed, watch } from 'vue';
 
 const props = defineProps({ vehicles: Array, selectedVehicleId: Number, userLocation: Object, activeTechnicianRequest: Object, requestRadiusMeters: Number });
 const form = useForm({ vehicle_id: props.selectedVehicleId ?? '', priority: 'normal', technician_address: '', observation: '', items: [] });
+const friendlyErrorLabels = {
+  vehicle_id: 'Selecciona el vehiculo al que le vas a solicitar herramientas.',
+  items: 'Agrega al menos una herramienta a la solicitud.',
+};
 const requestRadiusMeters = computed(() => props.requestRadiusMeters ?? 3000);
 const requestRadiusText = computed(() => `${(Number(requestRadiusMeters.value) / 1000).toFixed(0)} km`);
 
@@ -21,6 +25,8 @@ const nearbyVehicles = computed(() => props.vehicles
   .slice(0, 8)
 );
 const nearestVehicle = computed(() => nearbyVehicles.value.find(v => !v.is_occupied && v.has_available_inventory) ?? nearbyVehicles.value.find(v => !v.is_occupied) ?? null);
+const validationMessages = computed(() => Object.entries(form.errors).map(([field, message]) => friendlyErrorLabels[field] ?? message));
+const showValidationModal = computed(() => validationMessages.value.length > 0);
 
 watch(() => form.vehicle_id, () => { form.items = []; });
 
@@ -39,6 +45,20 @@ function selectVehicle(vehicleId) {
   const target = props.vehicles.find(v => Number(v.id) === Number(vehicleId));
   if (target?.is_occupied || hasActiveTechnicianRequest.value) return;
   form.vehicle_id = vehicleId;
+}
+function submit() {
+  form.clearErrors();
+  const errors = {};
+
+  if (!form.vehicle_id) errors.vehicle_id = friendlyErrorLabels.vehicle_id;
+  if (!form.items.length) errors.items = friendlyErrorLabels.items;
+
+  if (Object.keys(errors).length) {
+    form.setError(errors);
+    return;
+  }
+
+  form.post('/solicitudes');
 }
 </script>
 <template>
@@ -88,7 +108,7 @@ function selectVehicle(vehicleId) {
         <button v-if="nearestVehicle" type="button" :disabled="hasActiveTechnicianRequest" @click="selectVehicle(nearestVehicle.id)" class="mt-4 rounded-md bg-emerald-700 px-4 py-2 text-sm font-bold text-white transition-colors" :class="hasActiveTechnicianRequest ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-emerald-800'">Usar mas cercano: {{ nearestVehicle.plate }} ({{ formatDistance(nearestVehicle.distance_meters) }})</button>
       </section>
 
-      <form class="space-y-5" @submit.prevent="!hasActiveTechnicianRequest && form.post('/solicitudes')">
+      <form class="space-y-5" @submit.prevent="!hasActiveTechnicianRequest && submit()">
         <div class="grid gap-4 md:grid-cols-2">
           <label><span>Vehiculo</span><select v-model="form.vehicle_id" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-3"><option value="">Seleccionar</option><option v-for="v in vehicles" :key="v.id" :value="v.id" :disabled="v.is_occupied">{{ v.plate }} - {{ availabilityLabel(v) }} - {{ v.driver?.name ?? 'sin conductor' }}</option></select></label>
           <label><span>Prioridad</span><select v-model="form.priority" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-3"><option value="baja">Baja</option><option value="normal">Normal</option><option value="alta">Alta</option><option value="critica">Critica</option></select></label>
@@ -98,9 +118,22 @@ function selectVehicle(vehicleId) {
         <label class="block"><span>Direccion/Referencia del tecnico</span><textarea v-model="form.technician_address" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-3"></textarea></label>
         <label class="block"><span>Observaciones</span><textarea v-model="form.observation" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-3"></textarea></label>
         <section><div class="mb-3 flex items-center justify-between"><h2 class="font-semibold text-[#123f6e]">Herramientas solicitadas</h2><button type="button" :disabled="selectedIsOccupied || hasActiveTechnicianRequest" @click="addItem" class="inline-flex items-center gap-2 rounded-md border border-[#123f6e] px-3 py-2 font-semibold text-[#123f6e] transition-colors" :class="selectedIsOccupied || hasActiveTechnicianRequest ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-[#edf3fa]'"><Plus class="h-4 w-4" /> Agregar</button></div><div class="space-y-3"><div v-for="(item, index) in form.items" :key="index" class="grid gap-3 rounded-md border border-slate-200 p-3 md:grid-cols-[1fr_140px_auto]"><select v-model="item.inventory_item_id" class="rounded-md border border-slate-300 px-3 py-3"><option v-for="row in availableItems" :key="row.id" :value="row.inventory_item_id">{{ row.item?.name }} (disp. {{ row.quantity_available }})</option></select><input v-model="item.quantity" type="number" min="1" :max="maxFor(item.inventory_item_id)" class="rounded-md border border-slate-300 px-3 py-3" /><button type="button" @click="form.items.splice(index, 1)" class="cursor-pointer rounded-md border border-red-200 p-3 text-red-700 transition-colors hover:bg-red-50"><Trash2 class="h-5 w-5" /></button></div><p v-if="!form.items.length" class="rounded-md bg-slate-50 p-4 text-sm text-slate-500">Agrega al menos una herramienta.</p></div></section>
-        <div v-if="Object.keys(form.errors).length" class="rounded-md bg-red-50 p-3 text-sm text-red-700"><p v-for="error in form.errors" :key="error">{{ error }}</p></div>
         <button :disabled="selectedIsOccupied || hasActiveTechnicianRequest || form.processing" class="rounded-md bg-[#123f6e] px-5 py-3 font-semibold text-white transition-colors" :class="selectedIsOccupied || hasActiveTechnicianRequest || form.processing ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-[#0e2d52]'">Crear solicitud</button>
       </form>
+
+      <div v-if="showValidationModal" class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/60 p-4" @click.self="form.clearErrors()">
+        <section class="w-full max-w-md rounded-md border border-amber-200 bg-white p-6 text-center shadow-xl">
+          <div class="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-full border border-amber-200 bg-amber-50 text-amber-700">
+            <AlertTriangle class="h-7 w-7" />
+          </div>
+          <h2 class="text-xl font-bold text-[#123f6e]">Falta informacion para crear la solicitud</h2>
+          <p class="mt-2 text-sm text-slate-600">Revisa estos puntos antes de continuar:</p>
+          <ul class="mt-4 space-y-2 text-left text-sm text-slate-700">
+            <li v-for="message in validationMessages" :key="message" class="rounded-md bg-amber-50 px-3 py-2 text-amber-800">{{ message }}</li>
+          </ul>
+          <button type="button" @click="form.clearErrors()" class="mt-5 w-full cursor-pointer rounded-md bg-[#123f6e] px-4 py-3 font-semibold text-white transition-colors hover:bg-[#0e2d52]">Entendido</button>
+        </section>
+      </div>
     </section>
   </AppLayout>
 </template>
