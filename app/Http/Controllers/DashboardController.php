@@ -48,7 +48,7 @@ class DashboardController extends Controller
             $stats = [
                 ['label' => 'Total vehiculos', 'value' => Vehicle::count(), 'icon' => 'Car', 'route' => '/vehiculos'],
                 ['label' => 'Vehiculos activos', 'value' => Vehicle::where('status','active')->count(), 'icon' => 'MapPin', 'route' => '/vehiculos?status=active'],
-                ['label' => 'En movimiento', 'value' => Vehicle::where('current_speed','>',0)->count(), 'icon' => 'MapPin', 'route' => '/vehiculos?movement=moving'],
+                ['label' => 'En movimiento', 'value' => Vehicle::where('status', 'active')->where('current_speed','>',0)->count(), 'icon' => 'MapPin', 'route' => '/vehiculos?movement=moving'],
                 ['label' => 'Sin movimiento', 'value' => Vehicle::where('status', 'active')->where(fn ($q) => $q->whereNull('current_speed')->orWhere('current_speed', '<=', 0))->count(), 'icon' => 'Clock3', 'route' => '/vehiculos?movement=stopped'],
                 ['label' => 'Vehiculos reservados', 'value' => VehicleReservation::where('status', 'active')->where(fn ($q) => $q->whereNull('ends_at')->orWhere('ends_at', '>=', now()))->distinct('vehicle_id')->count('vehicle_id'), 'icon' => 'LockKeyhole', 'route' => '/vehiculos?reserved=active'],
                 ['label' => 'Proyectos', 'value' => Project::count(), 'icon' => 'FolderKanban', 'route' => '/vehiculos/proyectos'],

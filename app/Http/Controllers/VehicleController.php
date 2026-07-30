@@ -27,7 +27,7 @@ class VehicleController extends Controller
         }
         if ($request->filled('status')) { $query->where('status', $request->status); }
         if ($request->input('movement') === 'moving') {
-            $query->where('current_speed', '>', 0);
+            $query->where('status', 'active')->where('current_speed', '>', 0);
         }
         if ($request->input('movement') === 'stopped') {
             $query->where('status', 'active')
