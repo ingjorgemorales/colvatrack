@@ -85,12 +85,6 @@ function removePlate(index) {
   syncMoviles();
 }
 
-function clearPlates() {
-  if (!confirm('Quitar todos los moviles configurados?')) return;
-  plates.value = [];
-  syncMoviles();
-}
-
 
 function buildConfig() {
   return {
@@ -177,7 +171,6 @@ function submit() {
                   <summary class="cursor-pointer font-semibold text-[#123f6e]">Ver cadena enviada a la API</summary>
                   <textarea :value="form.moviles" readonly rows="3" class="mt-2 w-full min-w-[280px] rounded-md border border-slate-200 bg-white px-3 py-2 font-mono text-xs text-slate-600"></textarea>
                 </details>
-                <button v-if="plates.length" type="button" @click="clearPlates" class="cursor-pointer rounded-md border border-red-200 px-3 py-2 text-xs font-semibold text-red-700 transition-colors hover:bg-red-50">Quitar todas</button>
               </div>
             </div>
           </div>
