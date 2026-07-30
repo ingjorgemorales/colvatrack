@@ -55,6 +55,22 @@ const toneClass = computed(() => ({
   blue: 'border-blue-200 bg-blue-50 text-[#123f6e]',
   red: 'border-red-200 bg-red-50 text-red-700',
 })[error.value.tone]);
+
+function goBack() {
+  const referrer = document.referrer;
+
+  if (referrer && referrer !== window.location.href) {
+    try {
+      const previous = new URL(referrer);
+      if (previous.origin === window.location.origin) {
+        router.visit(`${previous.pathname}${previous.search}${previous.hash}`);
+        return;
+      }
+    } catch {}
+  }
+
+  router.visit('/dashboard');
+}
 </script>
 
 <template>
@@ -62,6 +78,8 @@ const toneClass = computed(() => ({
 
   <main class="grid min-h-screen place-items-center bg-[#eef2f7] px-4 py-10">
     <section class="w-full max-w-2xl rounded-md border border-slate-200 bg-white p-6 text-center shadow-sm sm:p-8">
+      <img :src="'/images/logo-login.png'" alt="ColvaTrack" class="mx-auto mb-6 h-16 max-w-56 object-contain" />
+
       <div class="mx-auto mb-5 grid h-16 w-16 place-items-center rounded-full border" :class="toneClass">
         <component :is="error.icon" class="h-8 w-8" />
       </div>
@@ -80,7 +98,7 @@ const toneClass = computed(() => ({
         </button>
         <button
           type="button"
-          @click="history.back()"
+          @click="goBack"
           class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-5 py-3 font-semibold text-[#123f6e] transition-colors hover:bg-[#edf3fa]"
         >
           <ArrowLeft class="h-5 w-5" /> Volver
