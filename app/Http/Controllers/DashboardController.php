@@ -45,11 +45,14 @@ class DashboardController extends Controller
             ];
             $recentRequests = ToolRequest::with(['vehicle','technician','driver','activeDelays'])->where('driver_id', $user->id)->latest()->limit(8)->get();
         } else {
+            $gpsFreshAfter = now()->subSeconds($this->gpsMovementMaxAgeSeconds());
+            $gpsMinSpeed = $this->gpsMovementMinSpeed();
             $stats = [
                 ['label' => 'Total vehiculos', 'value' => Vehicle::count(), 'icon' => 'Car', 'route' => '/vehiculos'],
                 ['label' => 'Vehiculos activos', 'value' => Vehicle::where('status','active')->count(), 'icon' => 'MapPin', 'route' => '/vehiculos?status=active'],
-                ['label' => 'En movimiento', 'value' => Vehicle::where('status', 'active')->where('current_speed','>',0)->count(), 'icon' => 'MapPin', 'route' => '/vehiculos?movement=moving'],
-                ['label' => 'Sin movimiento', 'value' => Vehicle::where('status', 'active')->where(fn ($q) => $q->whereNull('current_speed')->orWhere('current_speed', '<=', 0))->count(), 'icon' => 'Clock3', 'route' => '/vehiculos?movement=stopped'],
+                ['label' => 'En movimiento', 'value' => Vehicle::movingNow($gpsFreshAfter, $gpsMinSpeed)->count(), 'icon' => 'MapPin', 'route' => '/vehiculos?movement=moving'],
+                ['label' => 'Sin movimiento', 'value' => Vehicle::stoppedNow($gpsFreshAfter, $gpsMinSpeed)->count(), 'icon' => 'Clock3', 'route' => '/vehiculos?movement=stopped'],
+                ['label' => 'GPS sin actualizar', 'value' => Vehicle::gpsStaleNow($gpsFreshAfter)->count(), 'icon' => 'AlertTriangle', 'route' => '/vehiculos?movement=stale'],
                 ['label' => 'Vehiculos reservados', 'value' => VehicleReservation::where('status', 'active')->where(fn ($q) => $q->whereNull('ends_at')->orWhere('ends_at', '>=', now()))->distinct('vehicle_id')->count('vehicle_id'), 'icon' => 'LockKeyhole', 'route' => '/vehiculos?reserved=active'],
                 ['label' => 'Proyectos', 'value' => Project::count(), 'icon' => 'FolderKanban', 'route' => '/vehiculos/proyectos'],
                 ['label' => 'Total usuarios', 'value' => User::count(), 'icon' => 'Users', 'route' => '/usuarios'],
@@ -128,5 +131,15 @@ class DashboardController extends Controller
         $a = sin($deltaLat / 2) ** 2 + cos($aLat) * cos($bLat) * sin($deltaLng / 2) ** 2;
 
         return (int) round($radius * 2 * atan2(sqrt($a), sqrt(1 - $a)));
+    }
+
+    private function gpsMovementMaxAgeSeconds(): int
+    {
+        return max(10, (int) config('colvatrack.gps.movement_max_age_seconds', 60));
+    }
+
+    private function gpsMovementMinSpeed(): float
+    {
+        return max(0, (float) config('colvatrack.gps.movement_min_speed_kmh', 3));
     }
 }

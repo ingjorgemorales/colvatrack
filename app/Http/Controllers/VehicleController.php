@@ -18,6 +18,8 @@ class VehicleController extends Controller
     public function index(Request $request)
     {
         $perPage = min((int) $request->integer('per_page', 10), 100);
+        $gpsFreshAfter = now()->subSeconds($this->gpsMovementMaxAgeSeconds());
+        $gpsMinSpeed = $this->gpsMovementMinSpeed();
         $query = Vehicle::with(['driver', 'provider', 'project', 'activeReservation.reservedBy'])->latest();
         if ($request->filled('search')) {
             $search = $request->string('search');
@@ -27,11 +29,13 @@ class VehicleController extends Controller
         }
         if ($request->filled('status')) { $query->where('status', $request->status); }
         if ($request->input('movement') === 'moving') {
-            $query->where('status', 'active')->where('current_speed', '>', 0);
+            $query->movingNow($gpsFreshAfter, $gpsMinSpeed);
         }
         if ($request->input('movement') === 'stopped') {
-            $query->where('status', 'active')
-                ->where(fn ($q) => $q->whereNull('current_speed')->orWhere('current_speed', '<=', 0));
+            $query->stoppedNow($gpsFreshAfter, $gpsMinSpeed);
+        }
+        if ($request->input('movement') === 'stale') {
+            $query->gpsStaleNow($gpsFreshAfter);
         }
         if (in_array($request->input('reserved'), ['active', 'none'], true)) {
             $reservedVehicleIds = VehicleReservation::query()
@@ -43,8 +47,21 @@ class VehicleController extends Controller
                 ? $query->whereIn('id', $reservedVehicleIds)
                 : $query->whereNotIn('id', $reservedVehicleIds);
         }
+        $vehicles = $query->paginate($perPage)->withQueryString();
+        $vehicles->getCollection()->transform(function (Vehicle $vehicle) use ($gpsFreshAfter, $gpsMinSpeed) {
+            $status = $vehicle->movementStatus($gpsFreshAfter, $gpsMinSpeed);
+            $vehicle->setAttribute('movement_status', $status);
+            $vehicle->setAttribute('movement_status_label', match ($status) {
+                'moving' => 'En movimiento',
+                'stopped' => 'Sin movimiento',
+                default => 'GPS sin actualizar',
+            });
+
+            return $vehicle;
+        });
+
         return Inertia::render('Vehicles/Index', [
-            'vehicles' => $query->paginate($perPage)->withQueryString(),
+            'vehicles' => $vehicles,
             'filters' => $request->only('search', 'status', 'movement', 'reserved', 'per_page'),
         ]);
     }
@@ -240,5 +257,15 @@ class VehicleController extends Controller
         }
 
         return $data;
+    }
+
+    private function gpsMovementMaxAgeSeconds(): int
+    {
+        return max(10, (int) config('colvatrack.gps.movement_max_age_seconds', 60));
+    }
+
+    private function gpsMovementMinSpeed(): float
+    {
+        return max(0, (float) config('colvatrack.gps.movement_min_speed_kmh', 3));
     }
 }
