@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -39,7 +41,7 @@ class VehicleMovementService
             $current = $points->get(0);
             $previous = $points->get(1);
             $distance = ($current && $previous) ? $this->distanceMeters($current, $previous) : 0.0;
-            $movementStatus = $vehicle->movementStatus($freshAfter, $minSpeed);
+            $movementStatus = $this->movementStatus($vehicle, $freshAfter, $minSpeed);
             $isMoving = $movementStatus === 'moving';
 
             $vehicle->setAttribute('is_moving', $isMoving);
@@ -71,5 +73,28 @@ class VehicleMovementService
         $value = sin($deltaLat / 2) ** 2 + cos($lat1) * cos($lat2) * sin($deltaLng / 2) ** 2;
 
         return $earthRadius * 2 * atan2(sqrt($value), sqrt(1 - $value));
+    }
+
+    private function movementStatus(object $vehicle, CarbonInterface $freshAfter, float $minSpeed): string
+    {
+        $lastGpsDate = $vehicle->last_gps_datetime;
+
+        if (! $lastGpsDate) {
+            return 'stale';
+        }
+
+        if (! $lastGpsDate instanceof CarbonInterface) {
+            try {
+                $lastGpsDate = CarbonImmutable::parse($lastGpsDate);
+            } catch (\Throwable) {
+                return 'stale';
+            }
+        }
+
+        if ($lastGpsDate->lessThan($freshAfter)) {
+            return 'stale';
+        }
+
+        return (float) $vehicle->current_speed > $minSpeed ? 'moving' : 'stopped';
     }
 }
