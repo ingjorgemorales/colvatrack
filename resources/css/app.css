@@ -39,12 +39,16 @@ button, input, select, textarea { font: inherit; }
     animation: veh-pulse 3s ease-in-out infinite;
 }
 .vehicle-marker.is-stopped .vehicle-marker__halo {
-    background: rgba(51, 65, 85, 0.14);
-    box-shadow: 0 0 0 8px rgba(51, 65, 85, 0.07);
+    background: rgba(245, 158, 11, 0.2);
+    box-shadow: 0 0 0 8px rgba(245, 158, 11, 0.1);
 }
 .vehicle-marker.is-stale .vehicle-marker__halo {
     background: rgba(100, 116, 139, 0.12);
     box-shadow: 0 0 0 8px rgba(100, 116, 139, 0.06);
+}
+.vehicle-marker.is-reserved .vehicle-marker__halo {
+    background: rgba(220, 38, 38, 0.18);
+    box-shadow: 0 0 0 8px rgba(220, 38, 38, 0.1);
 }
 .vehicle-marker.is-occupied .vehicle-marker__halo {
     background: rgba(245, 158, 11, 0.2);
@@ -65,8 +69,9 @@ button, input, select, textarea { font: inherit; }
 }
 .vehicle-marker.is-fresh .vehicle-marker__car { background: #15803d; }
 .vehicle-marker.is-moving .vehicle-marker__car { background: #15803d; }
-.vehicle-marker.is-stopped .vehicle-marker__car { background: #334155; }
+.vehicle-marker.is-stopped .vehicle-marker__car { background: #d97706; }
 .vehicle-marker.is-stale .vehicle-marker__car { background: #64748b; }
+.vehicle-marker.is-reserved .vehicle-marker__car { background: #dc2626; }
 .vehicle-marker__car svg {
     width: 35px;
     height: 35px;
@@ -111,6 +116,10 @@ button, input, select, textarea { font: inherit; }
     line-height: 1;
     padding: 3px 4px;
     box-shadow: 0 5px 12px rgba(146, 64, 14, 0.22);
+}
+.vehicle-marker.is-reserved .vehicle-marker__badge {
+    border-color: rgba(153, 27, 27, 0.28);
+    background: #dc2626;
 }
 
 .technician-marker {

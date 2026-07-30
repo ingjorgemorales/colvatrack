@@ -102,7 +102,7 @@ function vehicleIcon(v) {
   const movementStatus = v.movement_status ?? (v.gps_is_fresh ? 'stopped' : 'stale');
   const heading = Number(v.current_heading || 0);
   const plate = escapeHtml(v.plate);
-  const stateClass = `is-${movementStatus}`;
+  const stateClass = reserved ? 'is-reserved' : `is-${movementStatus}`;
   const title = reserved ? 'Vehiculo reservado' : (occupied ? 'Vehiculo ocupado' : escapeHtml(v.movement_status_label ?? 'Movimiento GPS'));
 
   return L.divIcon({
@@ -360,7 +360,7 @@ watch([query, status, availability, selectedTechnicianId, distance], () => rende
       <span class="rounded bg-white px-3 py-2 shadow-sm">{{ filtered.length }} vehiculos visibles</span>
       <span class="rounded bg-white px-3 py-2 shadow-sm"><span class="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-[#123f6e]"></span>{{ technicianCount }} tecnicos ubicados</span>
       <span class="rounded bg-white px-3 py-2 shadow-sm"><span class="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-emerald-500"></span>{{ movingCount }} en movimiento</span>
-      <span class="rounded bg-white px-3 py-2 shadow-sm"><span class="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-slate-700"></span>{{ stoppedCount }} sin movimiento</span>
+      <span class="rounded bg-white px-3 py-2 shadow-sm"><span class="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-amber-500"></span>{{ stoppedCount }} sin movimiento</span>
       <span class="rounded bg-white px-3 py-2 shadow-sm"><span class="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-slate-400"></span>{{ staleCount }} GPS sin actualizar</span>
       <span class="rounded bg-white px-3 py-2 shadow-sm"><span class="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-amber-500"></span>{{ occupiedCount }} ocupados</span>
       <span class="rounded bg-white px-3 py-2 shadow-sm">{{ radiusLabel }}</span>
