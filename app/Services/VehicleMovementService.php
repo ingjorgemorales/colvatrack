@@ -36,7 +36,7 @@ class VehicleMovementService
             }
         }
 
-        return $vehicles->map(function ($vehicle) use ($latest, $threshold, $freshAfter) {
+        return $vehicles->map(function ($vehicle) use ($latest, $threshold, $freshAfter, $minSpeed) {
             $points = $latest->get($vehicle->id, collect());
             $current = $points->get(0);
             $previous = $points->get(1);
