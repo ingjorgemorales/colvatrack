@@ -1,7 +1,7 @@
 ﻿<script setup>
 import { Link, router, usePage } from '@inertiajs/vue3';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { BarChart3, Bell, Boxes, Car, ClipboardList, FolderKanban, LogOut, Map, Menu, Settings, ShieldCheck, UserCog, Users, X } from '@lucide/vue';
+import { BarChart3, Bell, BookOpen, Boxes, Car, ClipboardList, ExternalLink, FolderKanban, HelpCircle, LogOut, Map, Menu, Settings, ShieldCheck, UserCog, Users, X } from '@lucide/vue';
 import LocationGate from '@/Components/LocationGate.vue';
 import axios from 'axios';
 
@@ -10,6 +10,7 @@ const page = usePage();
 const open = ref(false);
 const showNotif = ref(false);
 const showUserMenu = ref(false);
+const showHelpMenu = ref(false);
 const notifList = ref([]);
 const loadingNotif = ref(false);
 const user = computed(() => page.props.auth?.user ?? null);
@@ -20,8 +21,25 @@ let notificationPoll = null;
 const closeHandler = (e) => {
   if (!e.target.closest('[data-notif]')) showNotif.value = false;
   if (!e.target.closest('[data-user-menu]')) showUserMenu.value = false;
+  if (!e.target.closest('[data-help-menu]')) showHelpMenu.value = false;
 };
 const initials = computed(() => `${user.value?.name?.[0] ?? 'U'}${user.value?.last_name?.[0] ?? ''}`.toUpperCase());
+const roleName = computed(() => user.value?.role?.name ?? '');
+const manuals = {
+  conductor: 'https://colvatel-my.sharepoint.com/shared?listurl=%2Fpersonal%2Finformatica%5Fdata%5Fcolvatel%5Fcom%2FDocuments&viewid=d39d7f15%2De246%2D418d%2D93cf%2D05cbe4c0b3b1&id=%2Fpersonal%2Finformatica%5Fdata%5Fcolvatel%5Fcom%2FDocuments%2FInformatica%2FAutomatizaciones%2FDesarrollo%20Aplicaciones%2FColvatrack%2FMANUAL%5FDE%20%5FUSUARIO%20%5FCOLVATRACK%5FROL%5FCONDUCTOR%2Epdf&parent=%2Fpersonal%2Finformatica%5Fdata%5Fcolvatel%5Fcom%2FDocuments%2FInformatica%2FAutomatizaciones%2FDesarrollo%20Aplicaciones%2FColvatrack',
+  tecnico: 'https://colvatel-my.sharepoint.com/shared?listurl=%2Fpersonal%2Finformatica%5Fdata%5Fcolvatel%5Fcom%2FDocuments&viewid=d39d7f15%2De246%2D418d%2D93cf%2D05cbe4c0b3b1&id=%2Fpersonal%2Finformatica%5Fdata%5Fcolvatel%5Fcom%2FDocuments%2FInformatica%2FAutomatizaciones%2FDesarrollo%20Aplicaciones%2FColvatrack%2FMANUAL%5FDE%20%5FUSUARIO%20%5FCOLVATRACK%5FROL%5FTECNICO%2Epdf&parent=%2Fpersonal%2Finformatica%5Fdata%5Fcolvatel%5Fcom%2FDocuments%2FInformatica%2FAutomatizaciones%2FDesarrollo%20Aplicaciones%2FColvatrack',
+};
+const helpManuals = computed(() => {
+  if (roleName.value === 'Conductor') return [{ label: 'Manual conductor', url: manuals.conductor }];
+  if (roleName.value === 'Tecnico') return [{ label: 'Manual tecnico', url: manuals.tecnico }];
+  if (roleName.value === 'Superadministrador') {
+    return [
+      { label: 'Manual conductor', url: manuals.conductor },
+      { label: 'Manual tecnico', url: manuals.tecnico },
+    ];
+  }
+  return [];
+});
 const permissions = computed(() => page.props.auth?.permissions ?? []);
 const can = (module, action = 'ver') => permissions.value.includes('*') || permissions.value.includes(`${module}.${action}`);
 const nav = computed(() => [
@@ -147,6 +165,21 @@ watch(() => page.url, () => { showNotif.value = false; });
                   <div class="mt-0.5 text-xs text-slate-500">{{ n.message }}</div>
                   <div class="mt-1 text-[10px] text-slate-400">{{ timeAgo(n.created_at) }}</div>
                 </div>
+              </div>
+            </div>
+            <div v-if="helpManuals.length" data-help-menu class="relative">
+              <a v-if="helpManuals.length === 1" :href="helpManuals[0].url" target="_blank" rel="noopener noreferrer" class="inline-flex rounded-md p-1.5 transition-colors hover:bg-slate-200" :title="helpManuals[0].label">
+                <HelpCircle class="h-5 w-5 text-slate-700" />
+              </a>
+              <button v-else @click="showHelpMenu=!showHelpMenu" class="inline-flex rounded-md p-1.5 transition-colors hover:bg-slate-200" title="Manuales de ayuda">
+                <HelpCircle class="h-5 w-5 text-slate-700" />
+              </button>
+              <div v-if="showHelpMenu && helpManuals.length > 1" class="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-lg border border-slate-200 bg-white text-left shadow-lg">
+                <div class="border-b border-slate-100 px-4 py-3 text-sm font-semibold text-slate-800">Manuales de usuario</div>
+                <a v-for="manual in helpManuals" :key="manual.label" :href="manual.url" target="_blank" rel="noopener noreferrer" @click="showHelpMenu=false" class="flex items-center justify-between gap-3 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                  <span class="inline-flex items-center gap-2"><BookOpen class="h-4 w-4 text-[#123f6e]" /> {{ manual.label }}</span>
+                  <ExternalLink class="h-3.5 w-3.5 text-slate-400" />
+                </a>
               </div>
             </div>
             <div class="hidden sm:block leading-tight"><div class="font-medium text-slate-950">{{ user?.name }} {{ user?.last_name }}</div><div class="text-sm text-slate-600">{{ user?.role?.name }}</div></div>
