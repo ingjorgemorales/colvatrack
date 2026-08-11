@@ -26,8 +26,8 @@ const closeHandler = (e) => {
 const initials = computed(() => `${user.value?.name?.[0] ?? 'U'}${user.value?.last_name?.[0] ?? ''}`.toUpperCase());
 const roleName = computed(() => user.value?.role?.name ?? '');
 const manuals = {
-  conductor: 'https://colvatel-my.sharepoint.com/shared?listurl=%2Fpersonal%2Finformatica%5Fdata%5Fcolvatel%5Fcom%2FDocuments&viewid=d39d7f15%2De246%2D418d%2D93cf%2D05cbe4c0b3b1&id=%2Fpersonal%2Finformatica%5Fdata%5Fcolvatel%5Fcom%2FDocuments%2FInformatica%2FAutomatizaciones%2FDesarrollo%20Aplicaciones%2FColvatrack%2FMANUAL%5FDE%20%5FUSUARIO%20%5FCOLVATRACK%5FROL%5FCONDUCTOR%2Epdf&parent=%2Fpersonal%2Finformatica%5Fdata%5Fcolvatel%5Fcom%2FDocuments%2FInformatica%2FAutomatizaciones%2FDesarrollo%20Aplicaciones%2FColvatrack',
-  tecnico: 'https://colvatel-my.sharepoint.com/shared?listurl=%2Fpersonal%2Finformatica%5Fdata%5Fcolvatel%5Fcom%2FDocuments&viewid=d39d7f15%2De246%2D418d%2D93cf%2D05cbe4c0b3b1&id=%2Fpersonal%2Finformatica%5Fdata%5Fcolvatel%5Fcom%2FDocuments%2FInformatica%2FAutomatizaciones%2FDesarrollo%20Aplicaciones%2FColvatrack%2FMANUAL%5FDE%20%5FUSUARIO%20%5FCOLVATRACK%5FROL%5FTECNICO%2Epdf&parent=%2Fpersonal%2Finformatica%5Fdata%5Fcolvatel%5Fcom%2FDocuments%2FInformatica%2FAutomatizaciones%2FDesarrollo%20Aplicaciones%2FColvatrack',
+  conductor: '/manuales/manual-conductor.pdf',
+  tecnico: '/manuales/manual-tecnico.pdf',
 };
 const helpManuals = computed(() => {
   if (roleName.value === 'Conductor') return [{ label: 'Manual conductor', url: manuals.conductor }];
