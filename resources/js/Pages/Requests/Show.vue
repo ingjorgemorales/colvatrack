@@ -21,6 +21,7 @@ const chatBox = ref(null);
 const allowed = computed(() => props.allowedTransitions ?? []);
 let channelName = null;
 let requestChannelName = null;
+let vehicleChannelName = null;
 let refreshTimer = null;
 let chatPollTimer = null;
 let routeMap = null;
@@ -209,11 +210,15 @@ function phoneHref(phone) {
 function change(status){ if (isActionDisabled(status)) return; commentForm.status = status; commentForm.patch(`/solicitudes/${props.request.id}/status`, { preserveScroll: true }); }
 function refreshRequest() {
   if (commentForm.processing) return;
-  router.reload({ only: ['request', 'allowedTransitions', 'routeLocations'], preserveScroll: true, preserveState: true });
+  router.reload({ only: ['request', 'allowedTransitions', 'routeLocations', 'deliveryDistanceMeters', 'deliveryRadiusMeters'], preserveScroll: true, preserveState: true });
 }
 function isCurrentRequestEvent(event) {
   const id = event?.tool_request?.id ?? event?.toolRequest?.id ?? event?.id;
   return Number(id) === Number(props.request.id);
+}
+function isCurrentVehicleEvent(event) {
+  const id = event?.vehicle?.id ?? event?.id;
+  return Number(id) === Number(props.request.vehicle_id);
 }
 function scrollChat(){ nextTick(() => { if(chatBox.value) chatBox.value.scrollTop = chatBox.value.scrollHeight; }); }
 function mergeMessages(incoming = []) {
@@ -405,6 +410,10 @@ onMounted(() => {
     window.Echo.channel(requestChannelName).listen('ToolRequestStatusChanged', (event) => {
       if (isCurrentRequestEvent(event)) refreshRequest();
     });
+    vehicleChannelName = 'vehicles';
+    window.Echo.channel(vehicleChannelName).listen('VehicleLocationUpdated', (event) => {
+      if (isCurrentVehicleEvent(event)) refreshRequest();
+    });
   }
   refreshTimer = window.setInterval(refreshRequest, 10000);
   chatPollTimer = window.setInterval(syncChat, 5000);
@@ -423,7 +432,7 @@ watch(() => [
   }
   openRouteMap();
 });
-onBeforeUnmount(() => { if(window.Echo && channelName) window.Echo.leave(channelName); if(window.Echo && requestChannelName) window.Echo.leave(requestChannelName); if(refreshTimer) window.clearInterval(refreshTimer); if(chatPollTimer) window.clearInterval(chatPollTimer); closeRouteMap(); });
+onBeforeUnmount(() => { if(window.Echo && channelName) window.Echo.leave(channelName); if(window.Echo && requestChannelName) window.Echo.leave(requestChannelName); if(window.Echo && vehicleChannelName) window.Echo.leave(vehicleChannelName); if(refreshTimer) window.clearInterval(refreshTimer); if(chatPollTimer) window.clearInterval(chatPollTimer); closeRouteMap(); });
 </script>
 <template>
   <Head :title="`Solicitud #${request.id}`" />
