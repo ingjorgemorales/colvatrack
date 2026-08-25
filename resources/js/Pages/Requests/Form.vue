@@ -10,7 +10,7 @@ const friendlyErrorLabels = {
   vehicle_id: 'Selecciona el vehiculo al que le vas a solicitar herramientas.',
   items: 'Agrega al menos una herramienta a la solicitud.',
 };
-const requestRadiusMeters = computed(() => props.requestRadiusMeters ?? 3000);
+const requestRadiusMeters = computed(() => props.requestRadiusMeters ?? 6000);
 const requestRadiusText = computed(() => `${(Number(requestRadiusMeters.value) / 1000).toFixed(0)} km`);
 
 const hasActiveTechnicianRequest = computed(() => Boolean(props.activeTechnicianRequest));

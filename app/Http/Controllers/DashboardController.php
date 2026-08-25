@@ -14,7 +14,7 @@ use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
-    private const TECHNICIAN_NEARBY_RADIUS_METERS = 3000;
+    private const TECHNICIAN_NEARBY_RADIUS_METERS = 6000;
 
     public function __invoke()
     {

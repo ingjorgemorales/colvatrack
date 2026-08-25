@@ -12,7 +12,7 @@ use InvalidArgumentException;
 
 class ToolRequestWebController extends Controller
 {
-    private const TECHNICIAN_REQUEST_RADIUS_METERS = 3000;
+    private const TECHNICIAN_REQUEST_RADIUS_METERS = 6000;
 
     public function index(Request $request)
     {

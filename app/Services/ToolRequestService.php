@@ -16,7 +16,7 @@ use InvalidArgumentException;
 class ToolRequestService
 {
     private const DELIVERY_RADIUS_METERS = 50;
-    private const TECHNICIAN_REQUEST_RADIUS_METERS = 3000;
+    private const TECHNICIAN_REQUEST_RADIUS_METERS = 6000;
 
     public function __construct(private InventoryService $inventory, private NotificationService $notifications, private MailNotificationService $mail) {}
 
@@ -319,7 +319,7 @@ class ToolRequestService
         );
 
         if ($distance > self::TECHNICIAN_REQUEST_RADIUS_METERS) {
-            throw new InvalidArgumentException('Solo puedes solicitar vehiculos ubicados a maximo 3 kilometros de tu ubicacion. Distancia actual: '.round($distance / 1000, 2).' km.');
+            throw new InvalidArgumentException('Solo puedes solicitar vehiculos ubicados a maximo 6 kilometros de tu ubicacion. Distancia actual: '.round($distance / 1000, 2).' km.');
         }
     }
 
