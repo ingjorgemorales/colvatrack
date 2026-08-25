@@ -25,21 +25,43 @@ const closeHandler = (e) => {
 };
 const initials = computed(() => `${user.value?.name?.[0] ?? 'U'}${user.value?.last_name?.[0] ?? ''}`.toUpperCase());
 const roleName = computed(() => user.value?.role?.name ?? '');
+
+// ========== MANUALES Y TUTORIALES ==========
 const manuals = {
   conductor: '/manuales/manual-conductor.pdf',
   tecnico: '/manuales/manual-tecnico.pdf',
 };
+
+const tutorials = {
+  conductor: '/manuales/tutorial-conductor.mp4',
+  tecnico: '/manuales/tutorial-tecnico.mp4',
+};
+
 const helpManuals = computed(() => {
-  if (roleName.value === 'Conductor') return [{ label: 'Manual conductor', url: manuals.conductor }];
-  if (roleName.value === 'Tecnico') return [{ label: 'Manual tecnico', url: manuals.tecnico }];
+  if (roleName.value === 'Conductor') {
+    return [
+      { label: 'Manual conductor', url: manuals.conductor },
+      { label: 'Tutorial conductor', url: tutorials.conductor },
+    ];
+  }
+  if (roleName.value === 'Tecnico') {
+    return [
+      { label: 'Manual técnico', url: manuals.tecnico },
+      { label: 'Tutorial técnico', url: tutorials.tecnico },
+    ];
+  }
   if (roleName.value === 'Superadministrador') {
     return [
       { label: 'Manual conductor', url: manuals.conductor },
-      { label: 'Manual tecnico', url: manuals.tecnico },
+      { label: 'Tutorial conductor', url: tutorials.conductor },
+      { label: 'Manual técnico', url: manuals.tecnico },
+      { label: 'Tutorial técnico', url: tutorials.tecnico },
     ];
   }
   return [];
 });
+// ==========================================
+
 const permissions = computed(() => page.props.auth?.permissions ?? []);
 const can = (module, action = 'ver') => permissions.value.includes('*') || permissions.value.includes(`${module}.${action}`);
 const nav = computed(() => [
