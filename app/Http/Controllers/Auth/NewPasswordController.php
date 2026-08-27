@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
@@ -30,6 +31,12 @@ class NewPasswordController extends Controller
 
         $request->validate([
             'password' => ['required', 'confirmed', PasswordRule::min(8)->mixedCase()->numbers()->symbols()],
+        ], [
+            'password.symbols' => 'La contraseña debe contener al menos un símbolo.',
+            'password.numbers' => 'La contraseña debe contener al menos un número.',
+            'password.mixed'   => 'La contraseña debe contener al menos una letra mayúscula y una minúscula.',
+            'password.min'     => 'La contraseña debe tener al menos :min caracteres.',
+            'password.confirmed' => 'La confirmación de la contraseña no coincide.',
         ]);
 
         $email = $request->session()->get('password_reset_email');
