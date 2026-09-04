@@ -91,6 +91,7 @@ class AuditImportantAction
         return match ($route) {
             'password.update', 'perfil.password' => $user.' cambio su contrasena.',
             'perfil.update' => $user.' actualizo los datos de su perfil.',
+            'perfil.ocupado' => $user.' inicio su hora de almuerzo (estado ocupado por 60 minutos).',
             'inventario.items.store' => $user.' registro la herramienta '.$this->payloadName($request).'.',
             'inventario.items.update' => $user.' actualizo la herramienta '.$this->modelName($request, 'item').'.',
             'inventario.items.status' => $user.' '.($this->routeModelStatus($request, 'item') === 'active' ? 'activo' : 'desactivo').' la herramienta '.$this->modelName($request, 'item').'.',

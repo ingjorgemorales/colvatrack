@@ -46,6 +46,7 @@ Route::middleware(['auth', 'must.change.password', 'audit'])->group(function () 
     Route::get('/perfil', [ProfileController::class, 'edit'])->name('perfil')->middleware('permission:perfil,ver');
     Route::patch('/perfil', [ProfileController::class, 'update'])->name('perfil.update')->middleware('permission:perfil,editar');
     Route::patch('/perfil/password', [ProfileController::class, 'password'])->name('perfil.password')->middleware('permission:perfil,editar');
+    Route::post('/perfil/ocupado', [ProfileController::class, 'occupy'])->name('perfil.ocupado')->middleware('permission:perfil,editar');
 
     Route::get('/inventario', [InventoryController::class, 'index'])->name('inventario.index')->middleware('permission:inventario,ver');
     Route::get('/inventario/catalogo', [InventoryController::class, 'catalog'])->name('inventario.catalogo')->middleware('permission:inventario,gestionar');

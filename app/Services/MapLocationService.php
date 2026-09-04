@@ -30,8 +30,9 @@ class MapLocationService
             ->get()
             ->map(function (Vehicle $vehicle) {
                 $vehicle->setAttribute('is_reserved', (bool) $vehicle->activeReservation);
-                $vehicle->setAttribute('is_occupied', (bool) $vehicle->activeToolRequest || (bool) $vehicle->activeReservation);
-                $vehicle->setAttribute('availability_status', $vehicle->activeReservation ? 'reservado' : ($vehicle->activeToolRequest ? 'ocupado' : 'disponible'));
+                $vehicle->setAttribute('driver_on_lunch', $vehicle->isDriverOnLunch());
+                $vehicle->setAttribute('is_occupied', (bool) $vehicle->activeToolRequest || (bool) $vehicle->activeReservation || $vehicle->isDriverOnLunch());
+                $vehicle->setAttribute('availability_status', $vehicle->activeReservation ? 'reservado' : (($vehicle->activeToolRequest || $vehicle->isDriverOnLunch()) ? 'ocupado' : 'disponible'));
                 return $vehicle;
             });
 

@@ -54,6 +54,24 @@ button, input, select, textarea { font: inherit; }
     background: rgba(245, 158, 11, 0.2);
     box-shadow: 0 0 0 8px rgba(245, 158, 11, 0.1);
 }
+
+/*estado de almueerzo*/
+.vehicle-marker.is-lunch .vehicle-marker__halo {
+    background: rgba(220, 38, 38, 0.18);
+    box-shadow: 0 0 0 8px rgba(220, 38, 38, 0.1);
+}
+
+.vehicle-marker.is-lunch .vehicle-marker__car {
+    background: #dc2626;
+}
+
+.vehicle-marker.is-lunch .vehicle-marker__badge {
+    border-color: rgba(153, 27, 27, 0.28);
+    background: #dc2626;
+}
+
+
+
 .vehicle-marker__car {
     position: absolute;
     left: 13px;
@@ -117,7 +135,7 @@ button, input, select, textarea { font: inherit; }
     padding: 3px 4px;
     box-shadow: 0 5px 12px rgba(146, 64, 14, 0.22);
 }
-.vehicle-marker.is-reserved .vehicle-marker__badge {
+.vehicle-marker.is-reserved .vehicle-marker__badge  {
     border-color: rgba(153, 27, 27, 0.28);
     background: #dc2626;
 }

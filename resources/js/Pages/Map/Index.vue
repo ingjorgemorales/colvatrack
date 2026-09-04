@@ -38,31 +38,34 @@ const radiusTechnicians = computed(() => {
   if (selectedTechnician.value) return [selectedTechnician.value];
   return technicians.value.filter(t => t.current_latitude && t.current_longitude);
 });
+
 const filtered = computed(() => vehicles.value
   .filter(v => `${v.plate} ${v.driver?.name ?? ''} ${v.driver?.last_name ?? ''}`.toLowerCase().includes(query.value.toLowerCase()))
   .filter(v => status.value === 'todos' || v.movement_status === status.value)
   .filter(v => availability.value === 'todos'
-    || (availability.value === 'disponibles' ? !v.is_occupied && (v.inventory ?? []).some(i => Number(i.quantity_available) > 0) : false)
-    || (availability.value === 'ocupados' ? Boolean(v.is_occupied) : false))
+    || (availability.value === 'disponibles' ? !v.is_occupied && !v.driver_on_lunch && (v.inventory ?? []).some(i => Number(i.quantity_available) > 0) : false)
+    || (availability.value === 'ocupados' ? Boolean(v.is_occupied || v.driver_on_lunch) : false))
   .filter(v => {
     if (!radiusMeters.value) return true;
     if (!radiusTechnicians.value.length) return false;
     return radiusTechnicians.value.some(t => distanceBetween(t, v) <= radiusMeters.value);
   })
 );
+
 const movingCount = computed(() => filtered.value.filter(v => v.movement_status === 'moving').length);
 const stoppedCount = computed(() => filtered.value.filter(v => v.movement_status === 'stopped').length);
 const staleCount = computed(() => filtered.value.filter(v => v.movement_status === 'stale').length);
-const occupiedCount = computed(() => filtered.value.filter(v => Boolean(v.is_occupied)).length);
+const occupiedCount = computed(() => filtered.value.filter(v => Boolean(v.is_occupied || v.driver_on_lunch)).length);
 const technicianCount = computed(() => technicians.value.length);
 const lastRefreshLabel = computed(() => lastRefresh.value ? lastRefresh.value.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'Pendiente');
 const locationMaxAgeMs = computed(() => Math.max(Number(page.props.location?.max_age_minutes ?? 1), 1) * 60 * 1000);
+
 const radiusLabel = computed(() => {
   if (!radiusMeters.value) return 'Sin filtro por radio';
-  if (!radiusTechnicians.value.length) return 'Sin tecnico con ubicacion para aplicar radio';
-  if (selectedTechnician.value) return `${filtered.value.length} vehiculos a ${radiusMeters.value} m de ${selectedTechnician.value.name}`;
-  if (isTechnician.value) return `${filtered.value.length} vehiculos a ${radiusMeters.value} m de tu ubicacion`;
-  return `${filtered.value.length} vehiculos a ${radiusMeters.value} m de cualquier tecnico`;
+  if (!radiusTechnicians.value.length) return 'Sin técnico con ubicación para aplicar radio';
+  if (selectedTechnician.value) return `${filtered.value.length} vehículos a ${radiusMeters.value} m de ${selectedTechnician.value.name}`;
+  if (isTechnician.value) return `${filtered.value.length} vehículos a ${radiusMeters.value} m de tu ubicación`;
+  return `${filtered.value.length} vehículos a ${radiusMeters.value} m de cualquier técnico`;
 });
 
 function escapeHtml(value) {
@@ -99,11 +102,13 @@ function isTechnicianLocationFresh(t) {
 function vehicleIcon(v) {
   const occupied = Boolean(v.is_occupied);
   const reserved = Boolean(v.is_reserved);
+  const onLunch = Boolean(v.driver_on_lunch);
   const movementStatus = v.movement_status ?? (v.gps_is_fresh ? 'stopped' : 'stale');
   const heading = Number(v.current_heading || 0);
   const plate = escapeHtml(v.plate);
-  const stateClass = reserved ? 'is-reserved' : `is-${movementStatus}`;
-  const title = reserved ? 'Vehiculo reservado' : (occupied ? 'Vehiculo ocupado' : escapeHtml(v.movement_status_label ?? 'Movimiento GPS'));
+  
+  const stateClass = onLunch ? 'is-lunch' : (reserved ? 'is-reserved' : (occupied ? 'is-occupied' : `is-${movementStatus}`));
+  const title = onLunch ? 'Vehículo ocupado (En almuerzo)' : (reserved ? 'Vehículo reservado' : (occupied ? 'Vehículo ocupado' : escapeHtml(v.movement_status_label ?? 'Movimiento GPS')));
 
   return L.divIcon({
     className: '',
@@ -123,7 +128,7 @@ function vehicleIcon(v) {
           </svg>
         </div>
         <div class="vehicle-marker__plate">${plate}</div>
-        ${occupied ? `<div class="vehicle-marker__badge">${reserved ? 'Reservado' : 'Ocupado'}</div>` : ''}
+        ${onLunch ? `<div class="vehicle-marker__badge vehicle-marker__badge--lunch">Ocupado</div>` : (reserved ? `<div class="vehicle-marker__badge">Reservado</div>` : (occupied ? `<div class="vehicle-marker__badge">Ocupado</div>` : ''))}
       </div>
     `,
   });
@@ -141,7 +146,7 @@ function technicianIcon(t) {
       <div class="technician-marker ${fresh ? 'is-fresh' : 'is-stale'}">
         ${fresh ? '<div class="technician-marker__halo"></div>' : ''}
         <div class="technician-marker__pin"><span>${escapeHtml(initials)}</span></div>
-        <div class="technician-marker__label">${escapeHtml(t.name ?? 'Tecnico')}</div>
+        <div class="technician-marker__label">${escapeHtml(t.name ?? 'Técnico')}</div>
       </div>
     `,
   });
@@ -151,35 +156,40 @@ function vehiclePopup(v) {
   const inv = (v.inventory ?? []).slice(0, 5).map(i => `<li>${escapeHtml(i.item?.name ?? 'Item')}: ${escapeHtml(i.quantity_available)} disp.</li>`).join('');
   const occupied = Boolean(v.is_occupied);
   const reserved = Boolean(v.is_reserved);
+  const onLunch = Boolean(v.driver_on_lunch);
   const movementStatus = v.movement_status ?? (v.gps_is_fresh ? 'stopped' : 'stale');
   const movementState = v.movement_status_label ?? 'GPS sin actualizar';
+  
   const availabilityText = reserved
-    ? `Reservado por administracion`
-    : (occupied ? `Ocupado por solicitud #${escapeHtml(v.active_tool_request?.id ?? '-')}` : 'Disponible para solicitud');
+    ? `Reservado por administración`
+    : (onLunch ? `Ocupado (Hora de almuerzo)` : (occupied ? `Ocupado por solicitud #${escapeHtml(v.active_tool_request?.id ?? '-')}` : 'Disponible para solicitud'));
+  
+  const isUnavailable = occupied || reserved || onLunch;
   const nearestDistance = nearestTechnicianDistance(v);
   const techDistance = nearestDistance === null ? '-' : `${Math.round(nearestDistance)} m`;
+
   return `
-      <div class="vehicle-popup">
+    <div class="vehicle-popup">
       <div class="vehicle-popup__title">${escapeHtml(v.plate)}</div>
       <div class="vehicle-popup__status is-${escapeHtml(movementStatus)}">${escapeHtml(movementState)}</div>
-      <div class="vehicle-popup__status ${occupied ? 'is-occupied' : 'is-available'}">${availabilityText}</div>
+      <div class="vehicle-popup__status ${isUnavailable ? 'is-occupied' : 'is-available'}">${availabilityText}</div>
       <dl>
         <div><dt>Proyecto</dt><dd>${escapeHtml(v.project?.name ?? 'Sin asignar')}</dd></div>
         <div><dt>Conductor</dt><dd>${escapeHtml(v.driver?.name ?? 'Sin asignar')}</dd></div>
         ${v.active_tool_request ? `<div><dt>Solicitado por</dt><dd>${escapeHtml(v.active_tool_request?.technician?.name ?? '-')}</dd></div>` : ''}
         ${reserved ? `<div><dt>Motivo reserva</dt><dd>${escapeHtml(v.active_reservation?.reason ?? '-')}</dd></div>` : ''}
         ${reserved ? `<div><dt>Reservado por</dt><dd>${escapeHtml(v.active_reservation?.reserved_by?.name ?? '-')}</dd></div>` : ''}
-        <div><dt>Telefono</dt><dd>${escapeHtml(v.driver?.phone ?? '-')}</dd></div>
-        <div><dt>Dist. tecnico</dt><dd>${escapeHtml(techDistance)}</dd></div>
+        <div><dt>Teléfono</dt><dd>${escapeHtml(v.driver?.phone ?? '-')}</dd></div>
+        <div><dt>Dist. técnico</dt><dd>${escapeHtml(techDistance)}</dd></div>
         <div><dt>Velocidad GPS</dt><dd>${escapeHtml(v.current_speed ?? 0)} km/h</dd></div>
         <div><dt>Movimiento GPS</dt><dd>${escapeHtml(v.movement_distance_meters ?? 0)} m desde el punto anterior</dd></div>
-        <div><dt>Ultima transmision</dt><dd>${escapeHtml(v.last_gps_datetime ?? '-')}</dd></div>
-        <div><dt>Direccion</dt><dd>${escapeHtml(v.current_address ?? '-')}</dd></div>
+        <div><dt>Última transmisión</dt><dd>${escapeHtml(v.last_gps_datetime ?? '-')}</dd></div>
+        <div><dt>Dirección</dt><dd>${escapeHtml(v.current_address ?? '-')}</dd></div>
       </dl>
       <strong>Inventario disponible</strong>
       <ul>${inv || '<li>Sin inventario</li>'}</ul>
       <div class="vehicle-popup__actions">
-        ${occupied ? '<span class="vehicle-popup__disabled-action">No disponible</span>' : `<a href="/solicitudes/create?vehicle_id=${v.id}">Solicitar herramientas</a>`}
+        ${isUnavailable ? '<span class="vehicle-popup__disabled-action">No disponible</span>' : `<a href="/solicitudes/create?vehicle_id=${v.id}">Solicitar herramientas</a>`}
         ${can('vehiculos', 'recorrido') ? `<a href="/vehiculos/${v.id}/recorrido">Recorrido</a>` : ''}
       </div>
     </div>
@@ -188,14 +198,14 @@ function vehiclePopup(v) {
 
 function technicianPopup(t) {
   const fresh = isTechnicianLocationFresh(t);
-  const freshness = fresh ? 'Ubicacion vigente' : 'Ubicacion vencida';
+  const freshness = fresh ? 'Ubicación vigente' : 'Ubicación vencida';
   return `
     <div class="vehicle-popup">
       <div class="vehicle-popup__title">${escapeHtml(t.name)} ${escapeHtml(t.last_name ?? '')}</div>
       <div class="vehicle-popup__status ${fresh ? 'is-fresh' : 'is-stale'}">${freshness}</div>
       <dl>
-        <div><dt>Rol</dt><dd>${escapeHtml(t.role ?? 'Tecnico')}</dd></div>
-        <div><dt>Telefono</dt><dd>${escapeHtml(t.phone ?? '-')}</dd></div>
+        <div><dt>Rol</dt><dd>${escapeHtml(t.role ?? 'Técnico')}</dd></div>
+        <div><dt>Teléfono</dt><dd>${escapeHtml(t.phone ?? '-')}</dd></div>
         <div><dt>Email</dt><dd>${escapeHtml(t.email ?? '-')}</dd></div>
         <div><dt>Actualizada</dt><dd>${escapeHtml(t.location_updated_at ?? '-')}</dd></div>
       </dl>
@@ -281,11 +291,11 @@ function normalizeTechnicianLocation(event) {
 
   return {
     id: incoming.id,
-    name: incoming.name ?? 'Tecnico',
+    name: incoming.name ?? 'Técnico',
     last_name: incoming.last_name ?? '',
     email: incoming.email ?? '',
     phone: incoming.phone ?? '',
-    role: incoming.role?.name ?? incoming.role ?? 'Tecnico',
+    role: incoming.role?.name ?? incoming.role ?? 'Técnico',
     current_latitude: incoming.current_latitude,
     current_longitude: incoming.current_longitude,
     location_updated_at: incoming.location_updated_at ?? new Date().toISOString(),
@@ -321,6 +331,7 @@ onMounted(() => {
   renderMarkers({ fit: true });
   if (window.Echo) {
     window.Echo.channel(technicianLocationChannelName).listen('UserLocationUpdated', receiveTechnicianLocation);
+    window.Echo.channel('vehicles').listen('DriverAvailabilityUpdated', refreshVehicles);
   }
   window.addEventListener('colvatrack:user-location-updated', receiveTechnicianLocation);
   pollTimer = window.setInterval(refreshVehicles, 30000);
@@ -347,9 +358,21 @@ watch([query, status, availability, selectedTechnicianId, distance], () => rende
   <AppLayout title="Mapa">
     <section class="mb-6 grid gap-4 xl:grid-cols-5">
       <input v-model="query" class="rounded-md border border-slate-200 bg-[#e9eef8] px-5 py-4 outline-none focus:border-[#123f6e]" placeholder="Buscar placa o conductor" />
-      <select v-model="status" class="rounded-md border border-slate-200 bg-[#e9eef8] px-5 py-4 outline-none focus:border-[#123f6e]"><option value="todos">Todos los estados</option><option value="moving">En movimiento</option><option value="stopped">Sin movimiento</option><option value="stale">GPS sin actualizar</option></select>
-      <select v-model="availability" class="rounded-md border border-slate-200 bg-[#e9eef8] px-5 py-4 outline-none focus:border-[#123f6e]"><option value="todos">Todos</option><option value="disponibles">Disponibles con herramientas</option><option value="ocupados">Ocupados</option></select>
-      <select v-model="selectedTechnicianId" class="rounded-md border border-slate-200 bg-[#e9eef8] px-5 py-4 outline-none focus:border-[#123f6e]"><option value="">{{ isTechnician ? 'Mi ubicacion' : 'Todos los tecnicos' }}</option><option v-for="t in technicians" :key="t.id" :value="t.id">{{ t.name }} {{ t.last_name ?? '' }}</option></select>
+      <select v-model="status" class="rounded-md border border-slate-200 bg-[#e9eef8] px-5 py-4 outline-none focus:border-[#123f6e]">
+        <option value="todos">Todos los estados</option>
+        <option value="moving">En movimiento</option>
+        <option value="stopped">Sin movimiento</option>
+        <option value="stale">GPS sin actualizar</option>
+      </select>
+      <select v-model="availability" class="rounded-md border border-slate-200 bg-[#e9eef8] px-5 py-4 outline-none focus:border-[#123f6e]">
+        <option value="todos">Todos</option>
+        <option value="disponibles">Disponibles con herramientas</option>
+        <option value="ocupados">Ocupados</option>
+      </select>
+      <select v-model="selectedTechnicianId" class="rounded-md border border-slate-200 bg-[#e9eef8] px-5 py-4 outline-none focus:border-[#123f6e]">
+        <option value="">{{ isTechnician ? 'Mi ubicación' : 'Todos los técnicos' }}</option>
+        <option v-for="t in technicians" :key="t.id" :value="t.id">{{ t.name }} {{ t.last_name ?? '' }}</option>
+      </select>
       <select v-model="distance" class="rounded-md border border-slate-200 bg-[#e9eef8] px-5 py-4 outline-none focus:border-[#16a34a]">
         <option v-if="!isTechnician" value="">Sin radio</option>
         <option v-for="option in radiusOptions" :key="option" :value="String(option)">{{ option }} metros</option>
@@ -357,16 +380,16 @@ watch([query, status, availability, selectedTechnicianId, distance], () => rende
     </section>
 
     <section class="mb-4 flex flex-wrap items-center gap-3 text-sm text-slate-600">
-      <span class="rounded bg-white px-3 py-2 shadow-sm">{{ filtered.length }} vehiculos visibles</span>
-      <span class="rounded bg-white px-3 py-2 shadow-sm"><span class="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-[#123f6e]"></span>{{ technicianCount }} tecnicos ubicados</span>
+      <span class="rounded bg-white px-3 py-2 shadow-sm">{{ filtered.length }} vehículos visibles</span>
+      <span class="rounded bg-white px-3 py-2 shadow-sm"><span class="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-[#123f6e]"></span>{{ technicianCount }} técnicos ubicados</span>
       <span class="rounded bg-white px-3 py-2 shadow-sm"><span class="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-emerald-500"></span>{{ movingCount }} en movimiento</span>
       <span class="rounded bg-white px-3 py-2 shadow-sm"><span class="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-amber-500"></span>{{ stoppedCount }} sin movimiento</span>
       <span class="rounded bg-white px-3 py-2 shadow-sm"><span class="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-slate-400"></span>{{ staleCount }} GPS sin actualizar</span>
-      <span class="rounded bg-white px-3 py-2 shadow-sm"><span class="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-amber-500"></span>{{ occupiedCount }} ocupados</span>
+      <span class="rounded bg-white px-3 py-2 shadow-sm"><span class="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-red-500"></span>{{ occupiedCount }} ocupados</span>
       <span class="rounded bg-white px-3 py-2 shadow-sm">{{ radiusLabel }}</span>
       <span class="rounded bg-white px-3 py-2 shadow-sm"><span class="mr-2 inline-block h-2.5 w-2.5 rounded-full" :class="refreshing ? 'bg-amber-500' : 'bg-emerald-500'"></span>Actualizado {{ lastRefreshLabel }}</span>
       <button @click="refreshVehicles" class="cursor-pointer rounded bg-white px-3 py-2 font-semibold text-[#123f6e] shadow-sm transition-colors hover:bg-[#edf3fa]">Actualizar ahora</button>
-      <Link v-if="can('vehiculos')" href="/vehiculos" class="rounded bg-white px-3 py-2 font-semibold text-[#123f6e] shadow-sm">Gestionar vehiculos</Link>
+      <Link v-if="can('vehiculos')" href="/vehiculos" class="rounded bg-white px-3 py-2 font-semibold text-[#123f6e] shadow-sm">Gestionar vehículos</Link>
     </section>
 
     <section class="rounded-md border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
@@ -394,4 +417,5 @@ watch([query, status, availability, selectedTechnicianId, distance], () => rende
     min-height: 720px;
   }
 }
+
 </style>

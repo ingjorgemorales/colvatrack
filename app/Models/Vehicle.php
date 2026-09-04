@@ -99,4 +99,9 @@ class Vehicle extends Model
 
         return (float) $this->current_speed > $minSpeed ? 'moving' : 'stopped';
     }
+
+    public function isDriverOnLunch(): bool
+    {
+        return $this->driver?->isOnLunch() ?? false;
+    }
 }

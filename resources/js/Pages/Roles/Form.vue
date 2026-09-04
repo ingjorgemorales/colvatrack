@@ -36,6 +36,7 @@ const actionLabels = {
   gestionar: 'Gestionar',
   recorrido: 'Ver recorrido',
   estado: 'Activar / desactivar',
+  almuerzo: 'Ocupado',
 };
 const toggle = (id) => form.permissions.includes(id) ? form.permissions = form.permissions.filter(p => p !== id) : form.permissions.push(id);
 const toggleManageableRole = (id) => form.manageable_roles.includes(id) ? form.manageable_roles = form.manageable_roles.filter(roleId => roleId !== id) : form.manageable_roles.push(id);

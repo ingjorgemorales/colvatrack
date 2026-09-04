@@ -133,7 +133,7 @@ class RoleController extends Controller
             'usuarios' => ['ver', 'crear', 'editar', 'eliminar'],
             'roles' => ['ver', 'crear', 'editar', 'eliminar'],
             'auditoria' => ['ver'],
-            'perfil' => ['ver', 'editar'],
+            'perfil' => ['ver', 'editar','almuerzo'],
             'configuracion_gps' => ['ver', 'crear', 'editar', 'eliminar', 'gestionar'],
         ];
     }

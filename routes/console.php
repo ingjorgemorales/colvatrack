@@ -12,3 +12,4 @@ Schedule::command('gps:sync-last-positions')->everySecond()->withoutOverlapping(
 Schedule::command('alerts:operational')->everyTenMinutes()->withoutOverlapping();
 Schedule::command('requests:expire-pending --minutes=12')->everyMinute()->withoutOverlapping();
 Schedule::command('requests:process-timers --finalize-minutes=2')->everyMinute()->withoutOverlapping();
+Schedule::command('drivers:expire-availability')->everyMinute()->withoutOverlapping();

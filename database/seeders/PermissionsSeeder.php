@@ -22,13 +22,13 @@ class PermissionsSeeder extends Seeder
             'usuarios'=>['ver','crear','editar','eliminar'],
             'roles'=>['ver','crear','editar','eliminar'],
             'auditoria'=>['ver'],
-            'perfil'=>['ver','editar'],
+            'perfil'=>['ver','editar','almuerzo'],
             'configuracion_gps'=>['ver','crear','editar','eliminar','gestionar'],
         ];
         foreach($catalog as $module=>$actions){ foreach($actions as $action){ Permission::firstOrCreate(['module'=>$module,'action'=>$action], ['name'=>"$module.$action"]); } }
         $superadmin=Role::where('name','Superadministrador')->first(); $superadmin?->permissions()->sync(Permission::pluck('id'));
-        $admin=Role::where('name','Administrador')->first(); $admin?->permissions()->sync(Permission::whereIn('module',['dashboard','mapa','solicitudes','chat','notificaciones','inventario','vehiculos','proyectos','reservas_vehiculos','reportes','usuarios','perfil'])->pluck('id'));
-        $tech=Role::where('name','Tecnico')->first(); $tech?->permissions()->sync(Permission::whereIn('module',['dashboard','mapa','solicitudes','chat','notificaciones','perfil'])->pluck('id'));
+        $admin=Role::where('name','Administrador')->first(); $admin?->permissions()->sync(Permission::whereIn('module',['dashboard','mapa','solicitudes','chat','notificaciones','inventario','vehiculos','proyectos','reservas_vehiculos','reportes','usuarios'])->pluck('id')->concat(Permission::where('module','perfil')->whereIn('action',['ver','editar'])->pluck('id')));
+        $tech=Role::where('name','Tecnico')->first(); $tech?->permissions()->sync(Permission::whereIn('module',['dashboard','mapa','solicitudes','chat','notificaciones'])->pluck('id')->concat(Permission::where('module','perfil')->whereIn('action',['ver','editar'])->pluck('id')));
         $driver=Role::where('name','Conductor')->first(); $driver?->permissions()->sync(Permission::whereIn('module',['dashboard','solicitudes','chat','notificaciones','inventario','perfil'])->pluck('id'));
         $this->syncManageableRoleDefaults();
     }

@@ -25,6 +25,8 @@ class User extends Authenticatable
             'must_change_password' => 'boolean',
             'last_login_at' => 'datetime',
             'location_updated_at' => 'datetime',
+            'driver_occupied_at' => 'datetime',
+            'last_lunch_at' => 'datetime',
             'current_latitude' => 'decimal:7',
             'current_longitude' => 'decimal:7',
         ];
@@ -70,6 +72,29 @@ class User extends Authenticatable
             ->where('module', $module)
             ->where('action', $action)
             ->isNotEmpty();
+    }
+     
+        public function isOnLunch(): bool
+    {
+        return $this->driver_occupied_at !== null
+            && $this->driver_occupied_at->greaterThanOrEqualTo(now()->subHour());
+    }
+
+    public function startLunch(): void
+    {
+        $now = now();
+        $this->update(['driver_occupied_at' => $now, 'last_lunch_at' => $now]);
+    }
+
+    public function endLunch(): void
+    {
+        $this->update(['driver_occupied_at' => null]);
+    }
+    
+        public function hasUsedLunchToday(): bool
+    {
+        return $this->last_lunch_at !== null
+            && $this->last_lunch_at->isToday();
     }
 
     public function sendPasswordResetNotification(#[\SensitiveParameter] $token): void
