@@ -41,6 +41,15 @@ class ProfileController extends Controller
         $data = $request->validate([
             'current_password' => ['required', 'current_password'],
             'password' => ['required', 'confirmed', Password::min(8)->mixedCase()->numbers()->symbols()],
+        ], [
+            'current_password.required' => 'Debes ingresar tu contraseña actual.',
+            'current_password' => 'La contraseña actual es incorrecta.',
+            'password.required' => 'La contraseña nueva es obligatoria.',
+            'password.confirmed' => 'La confirmación de la contraseña no coincide.',
+            'password.min' => 'La contraseña debe tener mínimo 8 caracteres.',
+            'password.mixed' => 'La contraseña debe contener al menos una letra mayúscula y una minúscula.',
+            'password.numbers' => 'La contraseña debe contener al menos un número.',
+            'password.symbols' => 'La contraseña debe contener al menos un carácter especial.',
         ]);
         $request->user()->update(['password' => Hash::make($data['password']), 'must_change_password' => false]);
         return back()->with('success', 'Contrasena actualizada.');

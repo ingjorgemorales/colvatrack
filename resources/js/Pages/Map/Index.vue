@@ -17,6 +17,8 @@ const query = ref('');
 const status = ref('todos');
 const availability = ref('todos');
 const selectedTechnicianId = ref('');
+const technicianSearch = ref('');
+const technicianOpen = ref(false);
 const radiusOptions = [500, 1000, 2000, 3000, 6000];
 const distance = ref(page.props.auth?.user?.role?.name === 'Tecnico' ? '6000' : '');
 const lastRefresh = ref(null);
@@ -32,6 +34,12 @@ const technicianLocationChannelName = 'users.location';
 let fittedOnce = false;
 
 const selectedTechnician = computed(() => technicians.value.find(t => String(t.id) === String(selectedTechnicianId.value)) ?? null);
+const filteredTechnicians = computed(() => {
+  const term = technicianSearch.value.toLowerCase();  /*Guarda el texto de la busqueda*/
+  const matching = technicians.value.filter(t =>  /*controla si el desplegable está abierto o cerrado*/
+    `${t.name} ${t.last_name ?? ''}`.toLowerCase().includes(term));/*la lista ya filtrada y limitada a 10.*/
+  return matching.slice(0, 10);
+});
 const radiusMeters = computed(() => Math.max(0, Number(distance.value || 0)));
 const radiusTechnicians = computed(() => {
   if (!radiusMeters.value) return [];
@@ -43,6 +51,7 @@ const filtered = computed(() => vehicles.value
   .filter(v => `${v.plate} ${v.driver?.name ?? ''} ${v.driver?.last_name ?? ''}`.toLowerCase().includes(query.value.toLowerCase()))
   .filter(v => status.value === 'todos' || v.movement_status === status.value)
   .filter(v => availability.value === 'todos'
+    || (availability.value === 'reservados' ? Boolean(v.is_reserved) : false)
     || (availability.value === 'disponibles' ? !v.is_occupied && !v.driver_on_lunch && (v.inventory ?? []).some(i => Number(i.quantity_available) > 0) : false)
     || (availability.value === 'ocupados' ? Boolean(v.is_occupied || v.driver_on_lunch) : false))
   .filter(v => {
@@ -356,7 +365,7 @@ watch([query, status, availability, selectedTechnicianId, distance], () => rende
 <template>
   <Head title="Mapa" />
   <AppLayout title="Mapa">
-    <section class="mb-6 grid gap-4 xl:grid-cols-5">
+    <section class="relative z-10 mb-6 grid gap-4 xl:grid-cols-5">
       <input v-model="query" class="rounded-md border border-slate-200 bg-[#e9eef8] px-5 py-4 outline-none focus:border-[#123f6e]" placeholder="Buscar placa o conductor" />
       <select v-model="status" class="rounded-md border border-slate-200 bg-[#e9eef8] px-5 py-4 outline-none focus:border-[#123f6e]">
         <option value="todos">Todos los estados</option>
@@ -366,13 +375,26 @@ watch([query, status, availability, selectedTechnicianId, distance], () => rende
       </select>
       <select v-model="availability" class="rounded-md border border-slate-200 bg-[#e9eef8] px-5 py-4 outline-none focus:border-[#123f6e]">
         <option value="todos">Todos</option>
+        <option value="reservados">Reservados</option>
         <option value="disponibles">Disponibles con herramientas</option>
         <option value="ocupados">Ocupados</option>
       </select>
-      <select v-model="selectedTechnicianId" class="rounded-md border border-slate-200 bg-[#e9eef8] px-5 py-4 outline-none focus:border-[#123f6e]">
-        <option value="">{{ isTechnician ? 'Mi ubicación' : 'Todos los técnicos' }}</option>
-        <option v-for="t in technicians" :key="t.id" :value="t.id">{{ t.name }} {{ t.last_name ?? '' }}</option>
-      </select>
+      <div class="relative z-30">
+        <button type="button" @click="technicianOpen = !technicianOpen" class="flex w-full items-center justify-between rounded-md border border-slate-200 bg-[#e9eef8] px-5 py-4 text-left outline-none focus:border-[#123f6e]">
+          <span class="truncate">{{ selectedTechnician ? `${selectedTechnician.name} ${selectedTechnician.last_name ?? ''}` : (isTechnician ? 'Mi ubicación' : 'Todos los técnicos') }}</span>
+          <svg xmlns="http://www.w3.org/2000/svg" class="ml-2 h-4 w-4 shrink-0 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
+        </button>
+        <div v-if="technicianOpen" class="absolute z-30 mt-1 w-full rounded-md border border-slate-200 bg-white shadow-lg">
+          <div class="relative">
+            <svg xmlns="http://www.w3.org/2000/svg" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" /></svg>
+            <input v-model="technicianSearch" placeholder="Buscar técnico..." class="w-full border-b border-slate-200 py-3 pl-10 pr-8 outline-none" />
+          </div>
+          <ul class="max-h-60 overflow-y-auto">
+            <li v-for="t in filteredTechnicians" :key="t.id" @click="selectedTechnicianId = t.id; technicianOpen = false" class="cursor-pointer px-4 py-2 hover:bg-[#e9eef8]">{{ t.name }} {{ t.last_name ?? '' }}</li>
+            <li v-if="filteredTechnicians.length === 0" class="px-4 py-2 text-sm text-slate-400">No se encontraron técnicos</li>
+          </ul>
+        </div>
+      </div>
       <select v-model="distance" class="rounded-md border border-slate-200 bg-[#e9eef8] px-5 py-4 outline-none focus:border-[#16a34a]">
         <option v-if="!isTechnician" value="">Sin radio</option>
         <option v-for="option in radiusOptions" :key="option" :value="String(option)">{{ option }} metros</option>
@@ -392,7 +414,7 @@ watch([query, status, availability, selectedTechnicianId, distance], () => rende
       <Link v-if="can('vehiculos')" href="/vehiculos" class="rounded bg-white px-3 py-2 font-semibold text-[#123f6e] shadow-sm">Gestionar vehículos</Link>
     </section>
 
-    <section class="rounded-md border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
+    <section class="relative z-0 rounded-md border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
       <div ref="mapEl" class="map-canvas w-full"></div>
     </section>
   </AppLayout>
@@ -400,6 +422,7 @@ watch([query, status, availability, selectedTechnicianId, distance], () => rende
 
 <style scoped>
 .map-canvas {
+  position: relative;
   height: calc(100vh - 18rem);
   min-height: 420px;
 }

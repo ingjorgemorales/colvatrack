@@ -86,6 +86,12 @@ class UserController extends Controller
             'email' => ['required', 'email', Rule::unique('users','email')->ignore($usuario->id)], 'phone' => ['required', 'string', 'max:40'], 'cargo' => ['required', 'string', 'max:120'],
             'status' => ['required', 'in:active,inactive'], 'password' => ['nullable', 'confirmed', Password::min(8)->mixedCase()->numbers()->symbols()],
             'must_change_password' => ['boolean'], 'vehicle_id' => ['nullable', 'exists:vehicles,id'],
+        ], [
+            'password.confirmed' => 'La confirmación de la contraseña no coincide.',
+            'password.min' => 'La contraseña debe tener mínimo 8 caracteres.',
+            'password.mixed' => 'La contraseña debe contener al menos una letra mayúscula y una minúscula.',
+            'password.numbers' => 'La contraseña debe contener al menos un número.',
+            'password.symbols' => 'La contraseña debe contener al menos un carácter especial.',
         ]);
         $vehicleId = $this->validatedVehicleAssignment($data, $usuario);
         unset($data['vehicle_id'], $data['password_confirmation']);
