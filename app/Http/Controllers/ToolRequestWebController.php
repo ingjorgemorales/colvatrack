@@ -17,12 +17,21 @@ class ToolRequestWebController extends Controller
     public function index(Request $request)
     {
         $user = auth()->user();
-        $query = ToolRequest::with(['vehicle','technician','driver','items.item','activeDelays'])->latest();
+        $query = ToolRequest::with([
+            'vehicle',
+            'technician',
+            'driver',
+            'items.item',
+            'activeDelays',
+            'delays' => fn ($delay) => $delay->latest('detected_at'),
+        ])->latest();
         if ($user->hasRole('Tecnico')) { $query->where('technician_id', $user->id); }
         if ($user->hasRole('Conductor')) { $query->where('driver_id', $user->id); }
         if ($request->filled('status')) { $query->where('status', $request->status); }
         if ($request->filled('priority')) { $query->where('priority', $request->priority); }
         if ($request->query('delay') === 'active') { $query->whereHas('activeDelays'); }
+        if ($request->query('delay') === 'any') { $query->whereHas('delays'); }
+        if ($request->query('delay') === 'resolved') { $query->whereHas('delays', fn ($delay) => $delay->where('status', 'resolved')); }
         if ($request->filled('search')) {
             $search = $request->string('search');
             $query->where(function ($q) use ($search) {
@@ -130,7 +139,16 @@ class ToolRequestWebController extends Controller
     {
         $user = auth()->user();
         abort_unless($this->canManageRequests($user, 'ver') || $solicitude->technician_id === $user->id || $solicitude->driver_id === $user->id, 403);
-        $solicitude->load(['vehicle.inventory.item','technician','driver','items.item.category','histories.user','chat.messages.sender','activeDelays']);
+        $solicitude->load([
+            'vehicle.inventory.item',
+            'technician',
+            'driver',
+            'items.item.category',
+            'histories.user',
+            'chat.messages.sender',
+            'activeDelays',
+            'delays' => fn ($query) => $query->latest('detected_at'),
+        ]);
         $routeLocations = collect();
 
         if ($solicitude->status === 'finalizada') {

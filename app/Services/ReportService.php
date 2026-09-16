@@ -196,7 +196,7 @@ class ReportService
 
     private function requests(array $filters): array
     {
-        $query = ToolRequest::with(['vehicle.project', 'technician', 'driver', 'items.item', 'activeDelays'])
+        $query = ToolRequest::with(['vehicle.project', 'technician', 'driver', 'items.item', 'activeDelays', 'delays'])
             ->when($filters['vehicle_id'] ?? null, fn (Builder $q, $id) => $q->where('vehicle_id', $id))
             ->when($filters['project_id'] ?? null, fn (Builder $q, $id) => $q->whereHas('vehicle', fn (Builder $vehicle) => $vehicle->where('project_id', $id)))
             ->when($filters['status'] ?? null, fn (Builder $q, $status) => $q->where('status', $status))
@@ -204,7 +204,7 @@ class ReportService
             ->latest('requested_at');
         $this->dateRange($query, $filters, 'requested_at');
 
-        $headings = ['Solicitud', 'Estado', 'Prioridad', 'Vehiculo', 'Proyecto', 'Tiene demora activa', 'Motivo demora activa', 'Tecnico', 'Conductor', 'Herramienta', 'Cantidad', 'Estado item', 'Fecha solicitud', 'Aceptada', 'Entregada', 'Lista para recoger', 'Recogida', 'Finalizada', 'Cancelada', 'Observacion'];
+        $headings = ['Solicitud', 'Estado', 'Prioridad', 'Vehiculo', 'Proyecto', 'Tuvo demora', 'Demoras registradas', 'Tiene demora activa', 'Motivo demora activa', 'Historial demoras', 'Tecnico', 'Conductor', 'Herramienta', 'Cantidad', 'Estado item', 'Fecha solicitud', 'Aceptada', 'Entregada', 'Lista para recoger', 'Recogida', 'Finalizada', 'Cancelada', 'Observacion'];
         $rows = [];
         foreach ($query->get() as $request) {
             $items = $request->items->isEmpty() ? collect([null]) : $request->items;
@@ -215,8 +215,11 @@ class ReportService
                     $request->priority,
                     $request->vehicle?->plate,
                     $request->vehicle?->project?->name,
+                    $request->delays->isNotEmpty() ? 'si' : 'no',
+                    $request->delays->count(),
                     $request->activeDelays->isNotEmpty() ? 'si' : 'no',
                     $request->activeDelays->pluck('reason')->join(' | '),
+                    $request->delays->map(fn (ToolRequestDelay $delay) => $delay->type.' ['.$delay->status.']: '.$delay->reason)->join(' | '),
                     trim($request->technician?->name.' '.$request->technician?->last_name),
                     trim($request->driver?->name.' '.$request->driver?->last_name),
                     $item?->item?->name,

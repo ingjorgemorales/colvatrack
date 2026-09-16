@@ -1,7 +1,7 @@
 <script setup>
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
-import { ArrowLeft, CheckCircle, Clock3, MapPin, MessageCircle, Navigation, PackageCheck, Phone, Send, Truck, X } from '@lucide/vue';
+import { AlertTriangle, ArrowLeft, CheckCircle, Clock3, MapPin, MessageCircle, Navigation, PackageCheck, Phone, Send, Truck, X } from '@lucide/vue';
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import L from 'leaflet';
 
@@ -76,6 +76,7 @@ const timeline = computed(() => [
 ].filter(([key]) => props.request[key]));
 const currentStatusClass = computed(() => statusClasses[props.request.status] ?? 'bg-slate-100 text-slate-700 border-slate-200');
 const activeDelay = computed(() => props.request.active_delays?.[0] ?? null);
+const delayHistory = computed(() => props.request.delays ?? []);
 const hasVehicleRouteLocation = computed(() => Boolean(props.request.vehicle?.current_latitude && props.request.vehicle?.current_longitude));
 const vehicleRouteName = computed(() => props.request.vehicle?.plate ? `Vehiculo ${props.request.vehicle.plate}` : 'Vehiculo asignado');
 const isFinalized = computed(() => props.request.status === 'finalizada');
@@ -174,8 +175,19 @@ const bogotaDateTimeFormatter = new Intl.DateTimeFormat('es-CO', {
   minute: '2-digit',
   hour12: true,
 });
+const delayTypeLabels = {
+  delivery_delay: 'Demora en entrega',
+  usage_delay: 'Demora en uso',
+  pickup_delay: 'Demora en recogida',
+};
+const delayStatusLabels = {
+  active: 'Activa',
+  resolved: 'Resuelta',
+};
 
 function statusLabel(status) { return labels[status] ?? status; }
+function delayTypeLabel(type) { return delayTypeLabels[type] ?? type; }
+function delayStatusLabel(status) { return delayStatusLabels[status] ?? status; }
 function actionLabel(status) { return actionLabels[status] ?? `Marcar ${statusLabel(status)}`; }
 function isActionDisabled(status) { return status === 'en_uso' && props.request.status === 'en_camino' && !canDeliverTool.value; }
 function actionDisabledMessage(status) {
@@ -457,6 +469,26 @@ onBeforeUnmount(() => { if(window.Echo && channelName) window.Echo.leave(channel
           <div v-if="activeDelay" class="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">
             <strong>En demora</strong>
             <p class="mt-1">{{ activeDelay.reason }}</p>
+          </div>
+        </article>
+
+        <article v-if="delayHistory.length" class="rounded-md border border-amber-200 bg-white p-5 shadow-sm">
+          <h2 class="mb-4 flex items-center gap-2 font-semibold text-[#123f6e]"><AlertTriangle class="h-5 w-5 text-amber-600" /> Historial de demoras</h2>
+          <div class="space-y-3">
+            <div v-for="delay in delayHistory" :key="delay.id" class="rounded-md border border-amber-100 bg-amber-50 p-3 text-sm">
+              <div class="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <strong class="text-amber-950">{{ delayTypeLabel(delay.type) }}</strong>
+                <span class="w-fit rounded px-2 py-1 text-xs font-semibold" :class="delay.status === 'active' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-700'">{{ delayStatusLabel(delay.status) }}</span>
+              </div>
+              <p class="text-amber-900">{{ delay.reason }}</p>
+              <div class="mt-2 grid gap-2 text-xs text-slate-600 sm:grid-cols-2">
+                <p><span class="font-semibold text-slate-700">Detectada:</span> {{ formatBogotaDateTime(delay.detected_at) }}</p>
+                <p><span class="font-semibold text-slate-700">Inicio del estado:</span> {{ formatBogotaDateTime(delay.state_started_at) || '-' }}</p>
+                <p><span class="font-semibold text-slate-700">Tiempo permitido:</span> {{ delay.allowed_minutes }} min</p>
+                <p><span class="font-semibold text-slate-700">Tiempo transcurrido:</span> {{ delay.elapsed_minutes }} min</p>
+                <p v-if="delay.resolved_at"><span class="font-semibold text-slate-700">Resuelta:</span> {{ formatBogotaDateTime(delay.resolved_at) }}</p>
+              </div>
+            </div>
           </div>
         </article>
 
