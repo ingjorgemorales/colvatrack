@@ -10,6 +10,14 @@ class VehicleLocationService
 {
     public function storeFromGpsPayload(Vehicle $vehicle, array $payload): Vehicle
     {
+        if (($payload['source'] ?? null) === 'ats') {
+            $payload += [
+                'device_brand' => $vehicle->gps_device_brand,
+                'device_model' => $vehicle->gps_device_model,
+                'battery' => $vehicle->battery,
+                'images' => ['marker' => $vehicle->gps_marker_url],
+            ];
+        }
         $vehicle->update([
             'current_latitude' => $payload['latitud'] ?? null,
             'current_longitude' => $payload['longitud'] ?? null,

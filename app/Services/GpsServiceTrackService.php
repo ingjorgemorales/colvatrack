@@ -30,33 +30,32 @@ class GpsServiceTrackService
         }
 
         $requestedAt = now();
-        $response = Http::withHeaders(['x-api-key' => $provider->api_key_encrypted ?: config('colvatrack.gps.api_key')])
-            ->timeout(20)
-            ->get($provider->base_url, [
-                'accion' => data_get($provider->config_json, 'accion', 'lastposition'),
-                'cliente' => $provider->client_code,
-                'moviles' => $moviles,
-            ]);
-
-        $json = $response->json();
-        $data = collect((array) data_get($json, 'data', []));
+        $client = app(GpsApiClient::class);
+        $response = $client->request($provider, $moviles);
+        $error = null;
+        try {
+            $data = collect($client->positions($provider, $response, $moviles));
+        } catch (RuntimeException $e) {
+            $data = collect();
+            $error = $e->getMessage();
+        }
 
         GpsRequestLog::create([
             'gps_provider_id' => $provider->id,
             'requested_moviles' => $moviles,
-            'status' => $response->successful() ? 'success' : 'error',
+            'status' => $error === null ? 'success' : 'error',
             'response_code' => $response->status(),
             'response_count' => $data->count(),
-            'error_message' => $response->successful() ? null : $response->body(),
+            'error_message' => $error,
             'requested_at' => $requestedAt,
             'created_at' => now(),
         ]);
 
         $this->markRequestDone($provider);
 
-        if (! $response->successful()) {
+        if ($error !== null) {
             $provider->update(['last_error_at' => now(), 'last_error_message' => 'Error consultando API GPS: '.$response->status()]);
-            throw new RuntimeException('Error consultando API GPS: '.$response->status());
+            throw new RuntimeException($error);
         }
 
         $created = 0;
@@ -72,6 +71,10 @@ class GpsServiceTrackService
             }
 
             $vehicle = Vehicle::where('external_gps_id', $movil)->orWhere('plate', $movil)->first();
+            if ($client->isAts($provider) && $vehicle && $vehicle->last_gps_datetime
+                && $vehicle->last_gps_datetime >= \Carbon\Carbon::parse($payload['timestamp'])) {
+                continue;
+            }
             if (! $vehicle) {
                 $vehicle = Vehicle::create([
                     'plate' => $movil,

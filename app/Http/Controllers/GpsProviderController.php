@@ -72,13 +72,9 @@ class GpsProviderController extends Controller
     {
         $data = $request->validate(['moviles' => ['required', 'string', 'max:500']]);
         try {
-            $response = Http::withHeaders(['x-api-key' => $gpsProvider->api_key_encrypted])
-                ->timeout(15)
-                ->get($gpsProvider->base_url, [
-                    'accion' => data_get($gpsProvider->config_json, 'accion', 'lastposition'),
-                    'cliente' => $gpsProvider->client_code,
-                    'moviles' => str_replace(' ', '', $data['moviles']),
-                ]);
+            $client = app(\App\Services\GpsApiClient::class);
+            $response = $client->request($gpsProvider, $data['moviles']);
+            $client->positions($gpsProvider, $response, $data['moviles']);
 
             $gpsProvider->update([
                 'last_success_at' => $response->successful() ? now() : $gpsProvider->last_success_at,
@@ -88,8 +84,8 @@ class GpsProviderController extends Controller
 
             return back()->with($response->successful() ? 'success' : 'error', $response->successful() ? 'Conexion GPS exitosa.' : 'La API respondio con error: '.$response->status());
         } catch (\Throwable $e) {
-            $gpsProvider->update(['last_error_at' => now(), 'last_error_message' => $e->getMessage()]);
-            return back()->with('error', 'No fue posible conectar: '.$e->getMessage());
+            $gpsProvider->update(['last_error_at' => now(), 'last_error_message' => 'No fue posible validar la conexion GPS.']);
+            return back()->with('error', 'No fue posible validar la conexion GPS. Revisa URL, credenciales y habilitacion del usuario.');
         }
     }
 
@@ -115,6 +111,20 @@ class GpsProviderController extends Controller
         }
 
         $data['config_json'] = array_replace_recursive($this->defaultConfig(), $data['config_json'] ?? []);
+        validator($data, [
+            'config_json.protocol' => ['nullable', 'in:servicetrack,ats'],
+            'config_json.timezone' => ['nullable', 'timezone'],
+            'config_json.moviles' => ['nullable', 'string', 'not_regex:/\\*/'],
+        ])->validate();
+        if (data_get($data, 'config_json.protocol') === 'ats') {
+            validator($data, ['client_code' => ['required', 'string']])->validate();
+            if (! $provider || data_get($provider->config_json, 'protocol') !== 'ats') {
+                validator($data, ['api_key_encrypted' => ['required', 'string']])->validate();
+            }
+            if (isset($data['api_key_encrypted'])) {
+                $data['api_key_encrypted'] = \Illuminate\Support\Facades\Crypt::encryptString($data['api_key_encrypted']);
+            }
+        }
 
         return $data;
     }
@@ -139,6 +149,7 @@ class GpsProviderController extends Controller
 
     private function syncVehiclesFromMoviles(GpsProvider $provider): void
     {
+        if (data_get($provider->config_json, 'protocol') === 'ats') return;
         $moviles = data_get($provider->config_json, 'moviles', '');
         if (is_string($moviles) && trim($moviles) !== '') {
             $plates = collect(explode(',', $moviles))->map(fn ($v) => trim($v))->filter()->unique();

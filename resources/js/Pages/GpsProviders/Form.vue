@@ -12,6 +12,8 @@ const rawMoviles = Array.isArray(config.moviles) ? config.moviles.join(',') : (c
 
 const form = useForm({
   name: props.provider?.name ?? '',
+  protocol: config.protocol ?? 'servicetrack',
+  timezone: config.timezone ?? 'America/Bogota',
   base_url: props.provider?.base_url ?? 'http://apis.gservicetrack.com:1880/triplog/',
   client_code: props.provider?.client_code ?? 'trackingvip',
   api_key_encrypted: '',
@@ -88,6 +90,8 @@ function removePlate(index) {
 
 function buildConfig() {
   return {
+    protocol: form.protocol,
+    timezone: form.timezone,
     header: form.header || 'x-api-key',
     accion: form.accion || 'lastposition',
     moviles: form.moviles || '',
@@ -126,12 +130,15 @@ function submit() {
       <Link href="/configuracion/gps" class="mb-5 inline-flex items-center gap-2 text-sm font-semibold text-[#123f6e]"><ArrowLeft class="h-4 w-4" /> Volver</Link>
       <form class="grid gap-5" @submit.prevent="submit">
         <div class="grid gap-4 md:grid-cols-2">
+          <label><span>Tipo de conexion</span><select v-model="form.protocol" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-3"><option value="servicetrack">ServiceTrack</option><option value="ats">ATS - Ultima posicion JSON</option></select></label>
+          <label v-if="form.protocol === 'ats'"><span>Zona horaria del proveedor</span><select v-model="form.timezone" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-3"><option value="America/Bogota">Bogota</option><option value="UTC">UTC</option></select></label>
+          <p v-if="form.protocol === 'ats' && form.base_url.startsWith('http:')" class="text-sm text-amber-700 md:col-span-2">Conexion HTTP sin cifrar. Confirma con el proveedor una URL HTTPS antes de enviar credenciales.</p>
           <label><span>Nombre proveedor</span><input v-model="form.name" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-3" /></label>
-          <label><span>Cliente</span><input v-model="form.client_code" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-3" /></label>
+          <label><span>{{ form.protocol === 'ats' ? 'Usuario ATS' : 'Cliente' }}</span><input v-model="form.client_code" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-3" /></label>
           <label class="md:col-span-2"><span>URL base</span><input v-model="form.base_url" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-3" /></label>
-          <label><span>Header API key</span><input v-model="form.header" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-3" /></label>
-          <label><span>Accion API</span><input v-model="form.accion" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-3" /></label>
-          <label class="md:col-span-2"><span>API key</span><input v-model="form.api_key_encrypted" type="password" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-3" /><small class="mt-1 block text-xs text-slate-500">En edicion puedes dejarla vacia para conservar la clave actual.</small></label>
+          <label v-if="form.protocol !== 'ats'"><span>Header API key</span><input v-model="form.header" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-3" /></label>
+          <label v-if="form.protocol !== 'ats'"><span>Accion API</span><input v-model="form.accion" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-3" /></label>
+          <label class="md:col-span-2"><span>{{ form.protocol === 'ats' ? 'Contrasena ATS' : 'API key' }}</span><input v-model="form.api_key_encrypted" type="password" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-3" /><small class="mt-1 block text-xs text-slate-500">En edicion puedes dejarla vacia para conservar la clave actual.</small></label>
           <div class="md:col-span-2">
             <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
               <span class="font-medium text-slate-700">Moviles a consultar</span>
